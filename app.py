@@ -370,6 +370,10 @@ def create_schema():
 
 lark_client = LarkClient()
 
+@app.route('/health')
+def health_check():
+    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
 @app.route('/')
 def index():
     try:
@@ -463,4 +467,5 @@ def debug_data():
         return jsonify({"success": False, "error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
