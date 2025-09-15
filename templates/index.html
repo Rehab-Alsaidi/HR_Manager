@@ -6,6 +6,7 @@
     <title>HR Evaluation Dashboard - Professional</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -51,13 +52,68 @@
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--dark-900);
+            background: radial-gradient(ellipse at top, rgba(59, 130, 246, 0.05) 0%, var(--dark-900) 50%);
             color: var(--dark-200);
             line-height: 1.5;
             min-height: 100vh;
             margin: 0;
+            position: relative;
+            overflow-x: hidden;
         }
-
+        
+        #particles-js {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            opacity: 0.3;
+        }
+        
+        .floating-shapes {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        
+        .floating-shapes::before,
+        .floating-shapes::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.1;
+        }
+        
+        .floating-shapes::before {
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
+            top: 20%;
+            left: 10%;
+            animation: float 20s ease-in-out infinite;
+        }
+        
+        .floating-shapes::after {
+            width: 200px;
+            height: 200px;
+            background: linear-gradient(45deg, #ec4899, #f59e0b);
+            bottom: 20%;
+            right: 10%;
+            animation: float 15s ease-in-out infinite reverse;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            33% { transform: translateY(-30px) rotate(120deg); }
+            66% { transform: translateY(30px) rotate(240deg); }
+        }
 
         .container {
             max-width: 1400px;
@@ -66,12 +122,25 @@
         }
 
         .header {
-            background: var(--dark-800);
-            padding: 3rem 2rem;
-            border-radius: var(--border-radius-xl);
+            background: linear-gradient(135deg, var(--dark-800) 0%, var(--dark-700) 100%);
+            padding: 4rem 2rem;
+            border-radius: var(--border-radius-2xl);
             margin-bottom: 2rem;
             border: 1px solid var(--dark-600);
-            box-shadow: var(--shadow-lg);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(59, 130, 246, 0.05), rgba(139, 92, 246, 0.05), rgba(236, 72, 153, 0.05));
+            pointer-events: none;
         }
 
         .header-content {
@@ -79,16 +148,24 @@
         }
 
         .header h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            color: var(--white);
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #ffffff 0%, #e5e7eb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            position: relative;
+            z-index: 1;
         }
 
         .header p {
-            font-size: 1rem;
+            font-size: 1.125rem;
             color: var(--dark-300);
             font-weight: 400;
+            position: relative;
+            z-index: 1;
+            opacity: 0.9;
         }
 
         .stats-grid {
@@ -99,19 +176,37 @@
         }
 
         .stat-card {
-            background: var(--dark-800);
+            background: linear-gradient(135deg, var(--dark-800) 0%, var(--dark-700) 100%);
             border: 1px solid var(--dark-600);
-            border-radius: var(--border-radius-lg);
+            border-radius: var(--border-radius-xl);
             padding: 2rem;
-            transition: all 0.2s ease;
-            box-shadow: var(--shadow);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .stat-card:hover::before {
+            opacity: 1;
         }
 
         .stat-card:hover {
-            background: var(--dark-700);
-            border-color: var(--dark-500);
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
+            background: linear-gradient(135deg, var(--dark-700) 0%, var(--dark-600) 100%);
+            border-color: var(--dark-400);
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
         }
 
         .stat-info h3 {
@@ -139,32 +234,100 @@
             background: var(--dark-700);
         }
 
-        .actions {
+        .toolbar {
             display: flex;
             gap: 1rem;
             margin-bottom: 2rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-container {
+            position: relative;
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1rem 1rem 1rem 3rem;
+            background: var(--dark-800);
+            border: 1px solid var(--dark-600);
+            border-radius: var(--border-radius-lg);
+            color: var(--white);
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            background: var(--dark-700);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--dark-400);
+        }
+
+        .filter-dropdown {
+            position: relative;
+        }
+
+        .filter-select {
+            padding: 1rem 2.5rem 1rem 1rem;
+            background: var(--dark-800);
+            border: 1px solid var(--dark-600);
+            border-radius: var(--border-radius-lg);
+            color: var(--white);
+            font-size: 0.875rem;
+            cursor: pointer;
+            appearance: none;
         }
 
         .btn {
-            padding: 0.75rem 1.5rem;
+            padding: 0.875rem 1.75rem;
             border: 1px solid var(--dark-600);
-            border-radius: var(--border-radius);
+            border-radius: var(--border-radius-lg);
             font-weight: 500;
             font-size: 0.875rem;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
             gap: 0.5rem;
             text-decoration: none;
-            background: var(--dark-800);
+            background: linear-gradient(135deg, var(--dark-800) 0%, var(--dark-700) 100%);
             color: var(--dark-200);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.6s;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
         }
 
         .btn:hover {
-            background: var(--primary);
-            border-color: var(--primary);
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            border-color: #3b82f6;
             color: var(--white);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
         }
 
         .alert {
@@ -188,12 +351,74 @@
             border-color: #dc2626;
         }
 
-        .table-container {
-            background: var(--dark-800);
+        .toast-container {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            z-index: 1000;
+            max-width: 400px;
+        }
+
+        .toast {
+            background: linear-gradient(135deg, var(--dark-800) 0%, var(--dark-700) 100%);
             border: 1px solid var(--dark-600);
-            border-radius: var(--border-radius-xl);
+            border-radius: var(--border-radius-lg);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            transform: translateX(100%);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast-success {
+            border-left: 4px solid #10b981;
+        }
+
+        .toast-error {
+            border-left: 4px solid #ef4444;
+        }
+
+        .toast-warning {
+            border-left: 4px solid #f59e0b;
+        }
+
+        .toast-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .toast-title {
+            font-weight: 600;
+            color: var(--white);
+        }
+
+        .toast-close {
+            background: none;
+            border: none;
+            color: var(--dark-400);
+            font-size: 1.25rem;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .toast-close:hover {
+            color: var(--white);
+        }
+
+        .table-container {
+            background: linear-gradient(135deg, var(--dark-800) 0%, rgba(31, 41, 55, 0.95) 100%);
+            border: 1px solid var(--dark-600);
+            border-radius: var(--border-radius-2xl);
             overflow: hidden;
-            box-shadow: var(--shadow-lg);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
         }
 
         .table-header {
@@ -377,8 +602,10 @@
             .container { padding: 1rem; }
             .header h1 { font-size: 2rem; }
             .stats-grid { grid-template-columns: 1fr; }
-            .actions { flex-direction: column; }
+            .toolbar { flex-direction: column; align-items: stretch; }
+            .search-container { min-width: auto; }
             th, td { padding: 0.75rem 0.5rem; }
+            .toast-container { right: 1rem; left: 1rem; max-width: none; }
         }
     </style>
 </head>
@@ -393,64 +620,101 @@
         </div>
 
         <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-content">
+            <div class="stat-card" style="--gradient-color: #3b82f6;">
+                <div class="stat-content" style="display: flex; justify-content: space-between; align-items: center;">
                     <div class="stat-info">
-                        <h3 id="totalEmployees">{{ total_employees }}</h3>
+                        <h3 id="totalEmployees" style="background: linear-gradient(45deg, #3b82f6, #60a5fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">{{ total_employees }}</h3>
                         <p>Total Employees</p>
+                        <div style="width: 40px; height: 2px; background: linear-gradient(90deg, #3b82f6, transparent); margin-top: 0.5rem; border-radius: 1px;"></div>
                     </div>
-                    <div class="stat-icon">
-                        <i class="fas fa-users"></i>
+                    <div class="stat-icon" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05)); border: 1px solid rgba(59, 130, 246, 0.2);">
+                        <i class="fas fa-users" style="color: #3b82f6;"></i>
                     </div>
                 </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-content">
+            <div class="stat-card" style="--gradient-color: #ef4444;">
+                <div class="stat-content" style="display: flex; justify-content: space-between; align-items: center;">
                     <div class="stat-info">
-                        <h3 id="urgentCount">0</h3>
+                        <h3 id="urgentCount" style="background: linear-gradient(45deg, #ef4444, #f87171); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">0</h3>
                         <p>Urgent Reviews</p>
+                        <div style="width: 40px; height: 2px; background: linear-gradient(90deg, #ef4444, transparent); margin-top: 0.5rem; border-radius: 1px;"></div>
                     </div>
-                    <div class="stat-icon">
-                        <i class="fas fa-exclamation-triangle"></i>
+                    <div class="stat-icon" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05)); border: 1px solid rgba(239, 68, 68, 0.2);">
+                        <i class="fas fa-exclamation-triangle" style="color: #ef4444;"></i>
                     </div>
                 </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-content">
+            <div class="stat-card" style="--gradient-color: #f59e0b;">
+                <div class="stat-content" style="display: flex; justify-content: space-between; align-items: center;">
                     <div class="stat-info">
-                        <h3 id="warningCount">0</h3>
+                        <h3 id="warningCount" style="background: linear-gradient(45deg, #f59e0b, #fbbf24); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">0</h3>
                         <p>Warning Reviews</p>
+                        <div style="width: 40px; height: 2px; background: linear-gradient(90deg, #f59e0b, transparent); margin-top: 0.5rem; border-radius: 1px;"></div>
                     </div>
-                    <div class="stat-icon">
-                        <i class="fas fa-clock"></i>
+                    <div class="stat-icon" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05)); border: 1px solid rgba(245, 158, 11, 0.2);">
+                        <i class="fas fa-clock" style="color: #f59e0b;"></i>
                     </div>
                 </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-content">
+            <div class="stat-card" style="--gradient-color: #10b981;">
+                <div class="stat-content" style="display: flex; justify-content: space-between; align-items: center;">
                     <div class="stat-info">
-                        <h3 id="emailsSent">0</h3>
+                        <h3 id="emailsSent" style="background: linear-gradient(45deg, #10b981, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">0</h3>
                         <p>Emails Sent</p>
+                        <div style="width: 40px; height: 2px; background: linear-gradient(90deg, #10b981, transparent); margin-top: 0.5rem; border-radius: 1px;"></div>
                     </div>
-                    <div class="stat-icon">
-                        <i class="fas fa-paper-plane"></i>
+                    <div class="stat-icon" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05)); border: 1px solid rgba(16, 185, 129, 0.2);">
+                        <i class="fas fa-paper-plane" style="color: #10b981;"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card" style="--gradient-color: #8b5cf6;">
+                <div class="stat-content" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="stat-info">
+                        <h3 id="todayEmailsSent" style="background: linear-gradient(45deg, #8b5cf6, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">0</h3>
+                        <p>Today's Emails</p>
+                        <div style="width: 40px; height: 2px; background: linear-gradient(90deg, #8b5cf6, transparent); margin-top: 0.5rem; border-radius: 1px;"></div>
+                    </div>
+                    <div class="stat-icon" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05)); border: 1px solid rgba(139, 92, 246, 0.2);">
+                        <i class="fas fa-paper-plane" style="color: #8b5cf6;"></i>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="actions">
+        <div class="toolbar">
+            <div class="search-container">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="search-input" placeholder="Search employees, leaders, or emails..." oninput="filterTable(this.value)">
+            </div>
+            <div class="filter-dropdown">
+                <select class="filter-select" onchange="filterByStatus(this.value)">
+                    <option value="all">All Statuses</option>
+                    <option value="Active">Active</option>
+                    <option value="Email Sent">Email Sent</option>
+                    <option value="Pending">Pending</option>
+                </select>
+            </div>
             <button class="btn" onclick="refreshData()">
                 <i class="fas fa-sync-alt"></i>
                 <span>Refresh Data</span>
             </button>
             <button class="btn" onclick="sendEmails()">
                 <i class="fas fa-paper-plane"></i>
-                <span>Send Email Reminders</span>
+                <span>Send Reminders</span>
+            </button>
+            <button class="btn" onclick="exportData()">
+                <i class="fas fa-download"></i>
+                <span>Export CSV</span>
             </button>
         </div>
 
         <div id="alert" class="alert"></div>
+
+        <div class="toast-container" id="toastContainer"></div>
+
+        <div class="floating-shapes"></div>
+        <div id="particles-js"></div>
 
         <div class="table-container">
             <div class="table-header">
@@ -560,54 +824,155 @@
             }, 6000);
         }
 
-        function refreshData() {
-            const btn = event.target.closest('.btn');
-            const originalHTML = btn.innerHTML;
-            btn.innerHTML = '<div class="loading"><div class="spinner"></div><span>Loading...</span></div>';
-            btn.disabled = true;
+        // Advanced Toast System
+        function showToast(title, message, type = 'success') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
             
+            toast.innerHTML = `
+                <div class="toast-header">
+                    <div class="toast-title">${title}</div>
+                    <button class="toast-close" onclick="this.parentElement.parentElement.remove()">&times;</button>
+                </div>
+                <div class="toast-message">${message}</div>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 100);
             setTimeout(() => {
-                location.reload();
-            }, 800);
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 400);
+            }, 5000);
         }
 
-        function sendEmails() {
-            const btn = event.target.closest('.btn');
-            const originalHTML = btn.innerHTML;
-            btn.innerHTML = '<div class="loading"><div class="spinner"></div><span>Sending...</span></div>';
-            btn.disabled = true;
+        // Advanced Search and Filter
+        function filterTable(query) {
+            const rows = document.querySelectorAll('tbody tr');
+            const searchTerm = query.toLowerCase();
             
-            fetch('/api/send-reminders')
-                .then(response => response.json())
-                .then(data => {
-                    btn.innerHTML = originalHTML;
-                    btn.disabled = false;
-                    
-                    if (data.success) {
-                        const count = data.sent_reminders.length;
-                        document.getElementById('emailsSent').textContent = count;
-                        
-                        if (count > 0) {
-                            showAlert(`🚀 Successfully sent ${count} reminder email(s)! Status updated automatically.`, 'success');
-                            
-                            // Update status badges for sent emails
-                            data.sent_reminders.forEach(reminder => {
-                                updateEmployeeStatus(reminder.employee, 'Email Sent');
-                            });
-                            
-                            updateDateHighlights();
-                        } else {
-                            showAlert('✨ All evaluations are up to date. No reminders needed at this time.', 'success');
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                const text = Array.from(cells).map(cell => cell.textContent.toLowerCase()).join(' ');
+                
+                if (text.includes(searchTerm)) {
+                    row.style.display = '';
+                    row.style.animation = 'slideIn 0.3s ease';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function filterByStatus(status) {
+            const rows = document.querySelectorAll('tbody tr');
+            
+            rows.forEach(row => {
+                const statusCell = row.querySelector('.status-badge span');
+                if (!statusCell) return;
+                
+                const rowStatus = statusCell.textContent.trim();
+                
+                if (status === 'all' || rowStatus === status) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // Export Data Function
+        function exportData() {
+            const rows = document.querySelectorAll('tbody tr:not([style*="display: none"])');
+            let csv = 'Employee Name,Leader Name,Probation End,Contract Renewal,Status,Leader Email\\n';
+            
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 6) {
+                    const data = [
+                        cells[0].querySelector('span').textContent.trim(),
+                        cells[1].textContent.trim(),
+                        cells[2].textContent.trim(),
+                        cells[3].textContent.trim(),
+                        cells[5].querySelector('span').textContent.trim(),
+                        cells[6].textContent.trim()
+                    ];
+                    csv += data.map(field => `"${field}"`).join(',') + '\\n';
+                }
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `hr_evaluations_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            showToast('Export Complete', 'Data exported successfully as CSV file', 'success');
+        }
+
+        // Initialize Particles
+        function initializeParticles() {
+            particlesJS('particles-js', {
+                particles: {
+                    number: {
+                        value: 80,
+                        density: {
+                            enable: true,
+                            value_area: 800
                         }
-                    } else {
-                        showAlert('❌ Error sending reminders: ' + data.error, 'error');
+                    },
+                    color: {
+                        value: '#3b82f6'
+                    },
+                    shape: {
+                        type: 'circle'
+                    },
+                    opacity: {
+                        value: 0.1,
+                        random: false
+                    },
+                    size: {
+                        value: 3,
+                        random: true
+                    },
+                    line_linked: {
+                        enable: true,
+                        distance: 150,
+                        color: '#3b82f6',
+                        opacity: 0.1,
+                        width: 1
+                    },
+                    move: {
+                        enable: true,
+                        speed: 1,
+                        direction: 'none',
+                        random: false,
+                        straight: false,
+                        out_mode: 'out',
+                        bounce: false
                     }
-                })
-                .catch(error => {
-                    btn.innerHTML = originalHTML;
-                    btn.disabled = false;
-                    showAlert('❌ Network error: ' + error.message, 'error');
-                });
+                },
+                interactivity: {
+                    detect_on: 'canvas',
+                    events: {
+                        onhover: {
+                            enable: true,
+                            mode: 'repulse'
+                        },
+                        onclick: {
+                            enable: true,
+                            mode: 'push'
+                        },
+                        resize: true
+                    }
+                },
+                retina_detect: true
+            });
         }
 
         function updateEmployeeStatus(employeeName, newStatus) {
@@ -681,9 +1046,86 @@
             }
         }
 
+        function refreshData() {
+            const btn = event.target.closest('.btn');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<div class="loading"><div class="spinner"></div><span>Loading...</span></div>';
+            btn.disabled = true;
+            
+            showToast('Refreshing Data', 'Fetching latest employee information...', 'success');
+            
+            setTimeout(() => {
+                location.reload();
+            }, 800);
+        }
+
+        function sendEmails() {
+            const btn = event.target.closest('.btn');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<div class="loading"><div class="spinner"></div><span>Sending...</span></div>';
+            btn.disabled = true;
+            
+            fetch('/api/send-reminders')
+                .then(response => response.json())
+                .then(data => {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                    
+                    if (data.success) {
+                        const count = data.sent_reminders.length;
+                        document.getElementById('emailsSent').textContent = count;
+                        
+                        // Update today's emails counter
+                        const currentTodayCount = parseInt(document.getElementById('todayEmailsSent').textContent) || 0;
+                        document.getElementById('todayEmailsSent').textContent = currentTodayCount + count;
+                        
+                        if (count > 0) {
+                            showToast('Emails Sent Successfully', `${count} reminder email(s) sent to team leaders`, 'success');
+                            
+                            // Update status badges for sent emails
+                            data.sent_reminders.forEach(reminder => {
+                                updateEmployeeStatus(reminder.employee, 'Email Sent');
+                            });
+                            
+                            updateDateHighlights();
+                        } else {
+                            showToast('All Up to Date', 'No reminders needed at this time', 'success');
+                        }
+                    } else {
+                        showToast('Error', 'Failed to send reminders: ' + data.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                    showToast('Network Error', error.message, 'error');
+                });
+        }
+
+
+        // Realistic daily email counter
+        function initializeTodayEmailCounter() {
+            const today = new Date().toDateString();
+            const stored = localStorage.getItem('todayEmailCount');
+            const storedDate = localStorage.getItem('emailCountDate');
+            
+            if (storedDate !== today) {
+                // New day, reset counter
+                localStorage.setItem('todayEmailCount', '0');
+                localStorage.setItem('emailCountDate', today);
+                document.getElementById('todayEmailsSent').textContent = '0';
+            } else {
+                // Same day, use stored count
+                document.getElementById('todayEmailsSent').textContent = stored || '0';
+            }
+        }
+
+
         // Initialize with enhanced animations
         document.addEventListener('DOMContentLoaded', function() {
             updateDateHighlights();
+            initializeParticles();
+            initializeTodayEmailCounter();
             
             // Staggered card animations
             const cards = document.querySelectorAll('.stat-card');
@@ -695,7 +1137,7 @@
                     card.style.transition = 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
                     card.style.opacity = '1';
                     card.style.transform = 'translateY(0)';
-                }, index * 150);
+                }, index * 100);
             });
             
             // Table row entrance animation
@@ -708,9 +1150,30 @@
                     row.style.transition = 'all 0.6s ease';
                     row.style.opacity = '1';
                     row.style.transform = 'translateX(0)';
-                }, 500 + (index * 50));
+                }, 800 + (index * 50));
             });
+            
+            // Welcome toast
+            setTimeout(() => {
+                showToast('Welcome to HR Manager', 'Dashboard loaded successfully with live metrics', 'success');
+            }, 1500);
         });
+
+        // Add slide-in animation keyframe
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    opacity: 0;
+                    transform: translateX(-20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateX(0);
+                }
+            }
+        `;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>

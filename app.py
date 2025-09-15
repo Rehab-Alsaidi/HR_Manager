@@ -15,31 +15,6 @@ load_dotenv()
 
 app = Flask(__name__)
 
-LARK_CONFIG = {
-    "app_id": os.getenv('LARK_APP_ID'),
-    "app_secret": os.getenv('LARK_APP_SECRET')
-}
-
-EMAIL_CONFIG = {
-    "smtp_server": os.getenv('SMTP_SERVER'),
-    "smtp_port": int(os.getenv('SMTP_PORT', 465)),
-    "sender_email": os.getenv('SENDER_EMAIL'),
-    "username": os.getenv('EMAIL_USERNAME'),
-    "password": os.getenv('EMAIL_PASSWORD'),
-    "use_tls": False
-}
-
-SHEET_CONFIG = {
-    "spreadsheet_token": os.getenv('SPREADSHEET_TOKEN'),
-    "sheet_id": os.getenv('SHEET_ID')
-}
-
-# Static evaluation form links
-EVALUATION_LINKS = {
-    "probation": os.getenv('PROBATION_FORM_URL'),
-    "contract_renewal": os.getenv('CONTRACT_RENEWAL_FORM_URL')
-}
-
 class LarkClient:
     def __init__(self):
         self.access_token = None
@@ -51,8 +26,8 @@ class LarkClient:
         
         url = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal"
         payload = {
-            "app_id": LARK_CONFIG["app_id"],
-            "app_secret": LARK_CONFIG["app_secret"]
+            "app_id": os.getenv('LARK_APP_ID'),
+            "app_secret": os.getenv('LARK_APP_SECRET')
         }
         
         response = requests.post(url, json=payload)
@@ -80,7 +55,7 @@ class LarkClient:
         import urllib.parse
         range_param = f"{actual_sheet_id}!A1:AC1000"  # Read full range to get all columns
         encoded_range = urllib.parse.quote(range_param, safe='')
-        url = f"https://open.feishu.cn/open-apis/sheets/v2/spreadsheets/{SHEET_CONFIG['spreadsheet_token']}/values/{encoded_range}"
+        url = f"https://open.feishu.cn/open-apis/sheets/v2/spreadsheets/{os.getenv('SPREADSHEET_TOKEN')}/values/{encoded_range}"
         
         headers = {
             "Authorization": f"Bearer {token}",
@@ -123,16 +98,16 @@ def send_reminder_email(employee_name, leader_name, leader_email, evaluation_lin
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE
         
-        with smtplib.SMTP_SSL(EMAIL_CONFIG["smtp_server"], EMAIL_CONFIG["smtp_port"], context=context) as server:
-            server.login(EMAIL_CONFIG["username"], EMAIL_CONFIG["password"])
+        with smtplib.SMTP_SSL(os.getenv('SMTP_SERVER'), int(os.getenv('SMTP_PORT', 465)), context=context) as server:
+            server.login(os.getenv('EMAIL_USERNAME'), os.getenv('EMAIL_PASSWORD'))
             
-            message = MIMEMultipart("alternative")
+            message = MIMEMultipart()
             message["Subject"] = f"Urgent: Employee Evaluation Required - {employee_name}"
-            message["From"] = EMAIL_CONFIG["sender_email"]
+            message["From"] = os.getenv('SENDER_EMAIL')
             message["To"] = leader_email
             
-            # Plain text version
-            text_body = f"""
+            # Professional email body with proper greeting
+            body = f"""
 Dear {leader_name},
 
 This is an urgent reminder that {employee_name}'s evaluation period is approaching and requires your immediate attention.
@@ -143,7 +118,7 @@ Employee Details:
 - Days Remaining: {days_remaining} days
 
 Please complete the evaluation using this link:
-{evaluation_link}
+linkkkk
 
 It is important to complete this evaluation before the deadline to ensure proper HR compliance.
 
@@ -154,42 +129,7 @@ HR Team
 51Talk
             """
             
-            # HTML version with clickable link
-            html_body = f"""
-<html>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-    <p>Dear <strong>{leader_name}</strong>,</p>
-    
-    <p>This is an urgent reminder that <strong>{employee_name}'s</strong> evaluation period is approaching and requires your immediate attention.</p>
-    
-    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
-        <h3 style="margin-top: 0; color: #495057;">Employee Details:</h3>
-        <ul style="margin: 10px 0;">
-            <li><strong>Name:</strong> {employee_name}</li>
-            <li><strong>Evaluation Type:</strong> {evaluation_type}</li>
-            <li><strong>Days Remaining:</strong> <span style="color: #dc3545; font-weight: bold;">{days_remaining} days</span></li>
-        </ul>
-    </div>
-    
-    <p>Please complete the evaluation using this link:<br>
-    <a href="{evaluation_link}" style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin: 10px 0;">Complete Employee Evaluation</a></p>
-    
-    <p>It is important to complete this evaluation before the deadline to ensure proper HR compliance.</p>
-    
-    <p>Thank you for your prompt attention to this matter.</p>
-    
-    <div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #dee2e6;">
-        <p style="margin: 0;"><strong>Best regards,</strong><br>
-        HR Team<br>
-        51Talk</p>
-    </div>
-</body>
-</html>
-            """
-            
-            # Attach both versions
-            message.attach(MIMEText(text_body, "plain"))
-            message.attach(MIMEText(html_body, "html"))
+            message.attach(MIMEText(body, "plain"))
             server.send_message(message)
             print(f"Email sent successfully to {leader_email}")
             return True
@@ -241,10 +181,6 @@ def check_and_send_reminders(employees_data):
         
         if not leader_email:
             continue
-            
-        # Check if email already sent - skip if status is "Email Sent"
-        if status == "Email Sent":
-            continue
         
         # Check probation end date
         if probation_end:
@@ -258,7 +194,7 @@ def check_and_send_reminders(employees_data):
                 
                 if days_until <= 20 and days_until >= 0:
                     # Use static probation evaluation link
-                    evaluation_link = EVALUATION_LINKS["probation"]
+                    evaluation_link = os.getenv('PROBATION_FORM_URL')
                     email_sent = send_reminder_email(employee_name, leader_name, leader_email, evaluation_link, days_until, "Probation Period Evaluation")
                     if email_sent:
                         # Update status in the original data
@@ -285,7 +221,7 @@ def check_and_send_reminders(employees_data):
                 
                 if days_until <= 20 and days_until >= 0:
                     # Use static contract renewal evaluation link
-                    evaluation_link = EVALUATION_LINKS["contract_renewal"]
+                    evaluation_link = os.getenv('CONTRACT_RENEWAL_FORM_URL')
                     email_sent = send_reminder_email(employee_name, leader_name, leader_email, evaluation_link, days_until, "Contract Renewal Evaluation")
                     if email_sent:
                         # Update status in the original data
@@ -302,77 +238,7 @@ def check_and_send_reminders(employees_data):
     
     return sent_reminders
 
-def create_schema():
-    """Create PostgreSQL database schema for HR Evaluation system"""
-    conn = psycopg2.connect(os.environ.get('DATABASE_URL'))
-    cursor = conn.cursor()
-    
-    # Create employees table
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS employees (
-        id SERIAL PRIMARY KEY,
-        employee_name VARCHAR(255) NOT NULL,
-        leader_name VARCHAR(255),
-        leader_email VARCHAR(255),
-        probation_end_date DATE,
-        contract_renewal_date DATE,
-        employee_status VARCHAR(100) DEFAULT 'Active',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    ''')
-    
-    # Create evaluation reminders table
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS evaluation_reminders (
-        id SERIAL PRIMARY KEY,
-        employee_id INTEGER REFERENCES employees(id),
-        evaluation_type VARCHAR(50) NOT NULL,
-        reminder_date DATE NOT NULL,
-        email_sent BOOLEAN DEFAULT FALSE,
-        email_sent_at TIMESTAMP,
-        days_until_evaluation INTEGER,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    ''')
-    
-    # Create evaluation forms table
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS evaluation_forms (
-        id SERIAL PRIMARY KEY,
-        form_type VARCHAR(50) NOT NULL,
-        form_url TEXT NOT NULL,
-        is_active BOOLEAN DEFAULT TRUE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    ''')
-    
-    # Insert default evaluation forms
-    cursor.execute('''
-    INSERT INTO evaluation_forms (form_type, form_url, is_active) 
-    VALUES 
-    ('probation', 'https://docs.google.com/forms/d/e/1FAIpQLSdTzbajU0IK9Lz6VItd7D-ZdWlQZ2qvEsiJtBvFmpIEJQgf7Q/viewform', TRUE),
-    ('contract_renewal', 'https://docs.google.com/forms/d/e/1FAIpQLSeQYmb6WILCIwW6q_FZ-klsAdhScQ-FuMDP_rUYpMkFltrzvA/viewform', TRUE)
-    ON CONFLICT DO NOTHING
-    ''')
-    
-    # Create indexes
-    cursor.execute('CREATE INDEX IF NOT EXISTS idx_employees_status ON employees(employee_status)')
-    cursor.execute('CREATE INDEX IF NOT EXISTS idx_employees_probation_date ON employees(probation_end_date)')
-    cursor.execute('CREATE INDEX IF NOT EXISTS idx_employees_contract_date ON employees(contract_renewal_date)')
-    cursor.execute('CREATE INDEX IF NOT EXISTS idx_reminders_employee ON evaluation_reminders(employee_id)')
-    cursor.execute('CREATE INDEX IF NOT EXISTS idx_reminders_date ON evaluation_reminders(reminder_date)')
-    
-    conn.commit()
-    cursor.close()
-    conn.close()
-    print("PostgreSQL database schema created successfully!")
-
 lark_client = LarkClient()
-
-@app.route('/health')
-def health_check():
-    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
 @app.route('/')
 def index():
@@ -395,7 +261,7 @@ def index():
                         
                         # Determine which evaluation link to show (probation vs contract renewal)
                         # For display, we'll show the probation form by default, but both will be available
-                        evaluation_link = EVALUATION_LINKS["probation"]  # Default to probation form
+                        evaluation_link = os.getenv('PROBATION_FORM_URL')  # Default to probation form
                         
                         formatted_employee = [
                             employee[1],  # Employee Name (Column I)
@@ -467,5 +333,4 @@ def debug_data():
         return jsonify({"success": False, "error": str(e)}), 500
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(debug=True, port=5001)
