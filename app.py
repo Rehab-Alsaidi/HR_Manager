@@ -927,41 +927,35 @@ def todays_reminders():
             chosen_date = None
             chosen_days = None
             
-            # Check probation end date
-            if probation_end:
+            # Get remaining days fields (same logic as check_and_send_reminders)
+            probation_remaining_days = employee[10] if len(employee) > 10 else None
+            contract_remaining_days = employee[11] if len(employee) > 11 else None
+            
+            # Check probation remaining days (direct from Base)
+            if probation_remaining_days is not None:
                 try:
-                    if isinstance(probation_end, (int, float)):
-                        eval_date = excel_date_to_python(probation_end).date()
-                    else:
-                        eval_date = datetime.strptime(str(probation_end), "%Y-%m-%d").date()
-                    
-                    days_until = (eval_date - today).days
-                    
-                    # STRICT: Only EXACTLY 20 days
-                    if days_until == 20:
-                        if chosen_evaluation is None or days_until < chosen_days:
-                            chosen_evaluation = "Probation Period Evaluation"
-                            chosen_date = eval_date
-                            chosen_days = days_until
+                    days_remaining = int(float(str(probation_remaining_days)))
+                    # Check for 19-23 days remaining
+                    if 19 <= days_remaining <= 23:
+                        chosen_evaluation = "Probation Period Evaluation"
+                        chosen_days = days_remaining
+                        # Calculate the date
+                        chosen_date = today + timedelta(days=days_remaining)
                 except:
                     pass
             
-            # Check contract renewal date  
-            if contract_renewal:
+            # Check contract remaining days (direct from Base)  
+            if contract_remaining_days is not None:
                 try:
-                    if isinstance(contract_renewal, (int, float)):
-                        eval_date = excel_date_to_python(contract_renewal).date()
-                    else:
-                        eval_date = datetime.strptime(str(contract_renewal), "%Y-%m-%d").date()
-                    
-                    days_until = (eval_date - today).days
-                    
-                    # STRICT: Only EXACTLY 20 days
-                    if days_until == 20:
-                        if chosen_evaluation is None or days_until < chosen_days:
+                    days_remaining = int(float(str(contract_remaining_days)))
+                    # Check for 19-23 days remaining
+                    if 19 <= days_remaining <= 23:
+                        # If probation is also in range, probation takes priority
+                        if chosen_evaluation is None or chosen_evaluation != "Probation Period Evaluation":
                             chosen_evaluation = "Contract Renewal Evaluation"
-                            chosen_date = eval_date
-                            chosen_days = days_until
+                            chosen_days = days_remaining
+                            # Calculate the date
+                            chosen_date = today + timedelta(days=days_remaining)
                 except:
                     pass
             
