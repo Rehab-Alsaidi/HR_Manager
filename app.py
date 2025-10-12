@@ -1749,6 +1749,64 @@ def debug_railway_issue():
             "error": str(e)
         })
 
+@app.route('/api/debug-data-source')
+def debug_data_source():
+    """Debug endpoint to check which data source is being used"""
+    try:
+        force_use_sheets = os.getenv('FORCE_USE_SHEETS', 'false').lower() == 'true'
+        
+        # Check Base configuration
+        base_config = {
+            'app_token': os.getenv('LARK_BASE_APP_TOKEN'),
+            'table_id': os.getenv('LARK_BASE_TABLE_ID'),
+            'view_id': os.getenv('LARK_BASE_VIEW_ID', ''),
+            'use_user_token': os.getenv('LARK_USE_USER_TOKEN', 'false').lower() == 'true'
+        }
+        
+        # Try Base API
+        base_result = None
+        base_error = None
+        try:
+            if not force_use_sheets:
+                data = lark_client.get_base_data()
+                base_result = f"SUCCESS - {len(data)} rows"
+            else:
+                base_result = "SKIPPED - FORCE_USE_SHEETS enabled"
+        except Exception as e:
+            base_error = str(e)
+            base_result = f"FAILED - {base_error}"
+        
+        # Try Sheets API
+        sheets_result = None
+        sheets_error = None
+        try:
+            sheets_data = lark_client.get_sheet_data()
+            sheets_result = f"SUCCESS - {len(sheets_data)} rows"
+        except Exception as e:
+            sheets_error = str(e)
+            sheets_result = f"FAILED - {sheets_error}"
+        
+        # What get_data() actually returns
+        actual_data = lark_client.get_data()
+        actual_result = f"{len(actual_data)} rows"
+        
+        return jsonify({
+            "success": True,
+            "force_use_sheets": force_use_sheets,
+            "base_config": base_config,
+            "base_api_test": base_result,
+            "base_error": base_error,
+            "sheets_api_test": sheets_result,
+            "sheets_error": sheets_error,
+            "actual_data_returned": actual_result,
+            "environment": {
+                "app_id": os.getenv('LARK_APP_ID', '')[:10] + "..." if os.getenv('LARK_APP_ID') else None,
+                "app_secret": "SET" if os.getenv('LARK_APP_SECRET') else "NOT SET"
+            }
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route('/api/debug-base-fields')
 def debug_base_fields():
     """Debug actual field names and data coming from Base"""
@@ -1912,8 +1970,8 @@ def all_employees_debug():
                 "contract_renewal_date": employee[2] or "",
                 "probation_days_remaining": probation_days,
                 "contract_days_remaining": contract_days,
-                "needs_probation_eval": probation_days is not None and probation_days == 20,
-                "needs_contract_eval": contract_days is not None and contract_days == 20
+                "needs_probation_eval": probation_days is not None and 19 <= probation_days <= 23,
+                "needs_contract_eval": contract_days is not None and 19 <= contract_days <= 23
             })
         
         return jsonify({
