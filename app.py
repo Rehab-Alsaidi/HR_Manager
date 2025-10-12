@@ -13,8 +13,7 @@ import requests
 from typing import List, Dict, Any, Optional
 from database import (
     init_database, is_email_sent_today_db, mark_email_sent_db, 
-    cleanup_old_email_logs_db, sync_employee_data_to_db, 
-    get_employees_from_db, get_sent_emails_summary
+    cleanup_old_email_logs_db, get_sent_emails_summary
 )
 
 # Load environment variables
@@ -431,14 +430,6 @@ class LarkClient:
     def get_data(self):
         """Get data from Lark Base"""
         data = self.get_base_data()
-        
-        # Sync data to database if available
-        try:
-            database_url = os.getenv('DATABASE_URL')
-            if database_url and database_url != 'postgresql://username:password@hostname:port/database':
-                sync_employee_data_to_db(data)
-        except Exception as e:
-            print(f"Failed to sync data to database: {e}")
         
         return data
 
@@ -1545,18 +1536,8 @@ def test_database_sync():
         # Get current data from Feishu
         data = lark_client.get_data()
         
-        # Sync to database
-        from database import sync_employee_data_to_db
-        sync_employee_data_to_db(data)
-        
-        # Get count of synced records
-        from database import get_db_connection
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM employees")
-        employee_count = cursor.fetchone()[0]
-        cursor.close()
-        conn.close()
+        # Count employees directly from Base data
+        employee_count = len(data) - 1 if len(data) > 1 else 0
         
         return jsonify({
             "success": True,

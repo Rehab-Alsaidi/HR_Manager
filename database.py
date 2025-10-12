@@ -37,53 +37,9 @@ def init_database():
             )
         """)
         
-        # Create employees table for caching employee data
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS employees (
-                id SERIAL PRIMARY KEY,
-                employee_name VARCHAR(255) NOT NULL,
-                leader_name VARCHAR(255),
-                leader_email VARCHAR(255),
-                leader_crm VARCHAR(100),
-                position VARCHAR(255),
-                department VARCHAR(255),
-                employee_crm VARCHAR(100),
-                contract_renewal_date DATE,
-                probation_end_date DATE,
-                employee_status VARCHAR(100),
-                last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(employee_name, leader_email)
-            )
-        """)
-        
-        # Create evaluation_reminders table for tracking sent reminders
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS evaluation_reminders (
-                id SERIAL PRIMARY KEY,
-                employee_name VARCHAR(255) NOT NULL,
-                leader_name VARCHAR(255),
-                leader_email VARCHAR(255) NOT NULL,
-                evaluation_type VARCHAR(100) NOT NULL,
-                deadline_date DATE NOT NULL,
-                days_remaining INTEGER NOT NULL,
-                email_sent BOOLEAN DEFAULT FALSE,
-                email_sent_at TIMESTAMP,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        
         # Create index for performance
         cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_sent_emails_date ON sent_emails(sent_date);
-        """)
-        
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_employees_email ON employees(leader_email);
-        """)
-        
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_reminders_date ON evaluation_reminders(deadline_date);
         """)
         
         conn.commit()
@@ -171,110 +127,8 @@ def cleanup_old_email_logs_db(days: int = 30):
         cursor.close()
         conn.close()
 
-def sync_employee_data_to_db(employees_data: List[List[str]]):
-    """Sync employee data from Feishu to database"""
-    if not employees_data or len(employees_data) < 2:
-        return
-    
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
-        # Clear existing data
-        cursor.execute("DELETE FROM employees")
-        
-        # Insert new data (skip header row)
-        for row in employees_data[1:]:
-            if len(row) < 10:
-                continue
-                
-            employee_name = row[0] if row[0] else None
-            leader_name = row[1] if row[1] else None
-            contract_renewal = row[2] if row[2] else None
-            probation_end = row[3] if row[3] else None
-            employee_status = row[4] if row[4] else None
-            position = row[5] if row[5] else None
-            leader_email = row[6] if row[6] else None
-            leader_crm = row[7] if row[7] else None
-            department = row[8] if row[8] else None
-            employee_crm = row[9] if row[9] else None
-            
-            if not employee_name or not leader_email:
-                continue
-            
-            # Convert date strings to date objects
-            contract_date = None
-            probation_date = None
-            
-            try:
-                if contract_renewal and contract_renewal != '':
-                    contract_date = datetime.strptime(contract_renewal, '%Y-%m-%d').date()
-            except:
-                pass
-                
-            try:
-                if probation_end and probation_end != '':
-                    probation_date = datetime.strptime(probation_end, '%Y-%m-%d').date()
-            except:
-                pass
-            
-            cursor.execute("""
-                INSERT INTO employees (
-                    employee_name, leader_name, leader_email, leader_crm,
-                    position, department, employee_crm, contract_renewal_date,
-                    probation_end_date, employee_status
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (employee_name, leader_email) 
-                DO UPDATE SET
-                    leader_name = EXCLUDED.leader_name,
-                    leader_crm = EXCLUDED.leader_crm,
-                    position = EXCLUDED.position,
-                    department = EXCLUDED.department,
-                    employee_crm = EXCLUDED.employee_crm,
-                    contract_renewal_date = EXCLUDED.contract_renewal_date,
-                    probation_end_date = EXCLUDED.probation_end_date,
-                    employee_status = EXCLUDED.employee_status,
-                    last_updated = CURRENT_TIMESTAMP
-            """, (
-                employee_name, leader_name, leader_email, leader_crm,
-                position, department, employee_crm, contract_date,
-                probation_date, employee_status
-            ))
-        
-        conn.commit()
-        print(f"✅ Synced {len(employees_data)-1} employee records to database")
-        
-    except Exception as e:
-        conn.rollback()
-        print(f"❌ Error syncing employee data: {e}")
-        raise
-    finally:
-        cursor.close()
-        conn.close()
-
-def get_employees_from_db() -> List[Dict[str, Any]]:
-    """Get employee data from database"""
-    conn = get_db_connection()
-    cursor = conn.cursor(cursor_factory=DictCursor)
-    
-    try:
-        cursor.execute("""
-            SELECT * FROM employees 
-            ORDER BY employee_name
-        """)
-        
-        employees = []
-        for row in cursor.fetchall():
-            employees.append(dict(row))
-        
-        return employees
-        
-    except Exception as e:
-        print(f"Error fetching employees from database: {e}")
-        return []
-    finally:
-        cursor.close()
-        conn.close()
+# Removed sync_employee_data_to_db and get_employees_from_db functions
+# App now reads directly from Base API, only uses database for email tracking
 
 def get_sent_emails_summary() -> Dict[str, Any]:
     """Get summary of sent emails from database"""
