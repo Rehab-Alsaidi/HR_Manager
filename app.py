@@ -427,101 +427,10 @@ class LarkClient:
         print(f"✅ Base data loaded: {total_records} records total")
         return extracted_data
 
-    def get_sheet_data(self):
-        """Get data from Lark Sheets using REST API (fallback method)"""
-        token = self.get_access_token()
-        
-        # Use the actual internal sheet ID from the metadata response
-        actual_sheet_id = "43c01e"
-        
-        # Read from column A to column AG to get ALL data
-        import urllib.parse
-        range_param = f"{actual_sheet_id}!A1:AG10000"  
-        encoded_range = urllib.parse.quote(range_param, safe='')
-        spreadsheet_token = os.getenv('SPREADSHEET_TOKEN')
-        url = f"https://open.feishu.cn/open-apis/sheets/v2/spreadsheets/{spreadsheet_token}/values/{encoded_range}"
-        
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
-        }
-        
-        response = requests.get(url, headers=headers)
-        
-        try:
-            data = response.json()
-            if data.get("code") == 0:
-                values = data["data"]["valueRange"]["values"]
-                
-                # Extract columns based on sheet structure:
-                extracted_data = []
-                for row in values:
-                    # Helper function to extract text from complex cell objects
-                    def extract_text_from_cell(cell):
-                        if isinstance(cell, list) and len(cell) > 0:
-                            if isinstance(cell[0], dict) and 'text' in cell[0]:
-                                return cell[0]['text']
-                            return str(cell[0]) if cell[0] else ""
-                        elif isinstance(cell, dict) and 'text' in cell:
-                            return cell['text']
-                        elif isinstance(cell, str):
-                            return cell
-                        elif cell is not None:
-                            return str(cell)
-                        return ""
-                    
-                    # Helper function to format dates
-                    def format_date_if_number(value):
-                        text_value = extract_text_from_cell(value)
-                        if text_value and text_value.strip():
-                            # Check if it's an Excel date number
-                            try:
-                                date_num = float(text_value)
-                                if 40000 <= date_num <= 50000:  # Reasonable Excel date range
-                                    # Convert Excel date to Python date
-                                    epoch = datetime(1899, 12, 30)
-                                    date_obj = epoch + timedelta(days=date_num)
-                                    return date_obj.strftime('%Y-%m-%d')
-                            except (ValueError, TypeError):
-                                pass
-                        return text_value
-                    
-                    # Always extract the row, filling missing columns with empty string
-                    extracted_row = [
-                        extract_text_from_cell(row[8]) if len(row) > 8 else "",   # I - Employee Name
-                        "",  # Leader Name - not available in new structure, will be empty
-                        format_date_if_number(row[14]) if len(row) > 14 else "",   # O - Contract Renewal Date
-                        format_date_if_number(row[15]) if len(row) > 15 else "",   # P - Probation Period End Date
-                        extract_text_from_cell(row[27]) if len(row) > 27 else "",   # AB - Employee Status
-                        extract_text_from_cell(row[11]) if len(row) > 11 else "",   # L - Position
-                        extract_text_from_cell(row[6]) if len(row) > 6 else "",    # G - Leader Email
-                        extract_text_from_cell(row[5]) if len(row) > 5 else "",    # F - Leader CRM
-                        extract_text_from_cell(row[7]) if len(row) > 7 else "",    # H - Department
-                        extract_text_from_cell(row[2]) if len(row) > 2 else ""     # C - CRM (Employee CRM)
-                    ]
-                    extracted_data.append(extracted_row)
-                    
-                return extracted_data
-            else:
-                raise Exception(f"Sheet API error: {data}")
-        except Exception as e:
-            raise Exception(f"Failed to parse sheet response: {response.text}")
     
     def get_data(self):
-        """Get data from Lark Base with fallback to Sheets"""
-        # Force use Sheets for now until Base permissions are fixed
-        force_use_sheets = os.getenv('FORCE_USE_SHEETS', 'false').lower() == 'true'
-        
-        if force_use_sheets:
-            print("🔧 FORCE_USE_SHEETS enabled - using Sheet API directly")
-            data = self.get_sheet_data()
-        else:
-            try:
-                data = self.get_base_data()
-            except Exception as base_error:
-                print(f"❌ Base access failed: {base_error}")
-                print("📄 Falling back to Sheets API...")
-                data = self.get_sheet_data()
+        """Get data from Lark Base"""
+        data = self.get_base_data()
         
         # Sync data to database if available
         try:
@@ -1674,7 +1583,6 @@ def debug_railway_issue():
             "LARK_APP_SECRET": os.getenv('LARK_APP_SECRET', 'NOT_SET')[:10] + "..." if os.getenv('LARK_APP_SECRET') else 'NOT_SET',
             "LARK_BASE_APP_TOKEN": os.getenv('LARK_BASE_APP_TOKEN', 'NOT_SET'),
             "LARK_BASE_TABLE_ID": os.getenv('LARK_BASE_TABLE_ID', 'NOT_SET'),
-            "SPREADSHEET_TOKEN": os.getenv('SPREADSHEET_TOKEN', 'NOT_SET'),
             "DATABASE_URL": "SET" if os.getenv('DATABASE_URL') and os.getenv('DATABASE_URL') != 'postgresql://username:password@hostname:port/database' else 'NOT_SET'
         }
         
@@ -1753,7 +1661,6 @@ def debug_railway_issue():
 def debug_data_source():
     """Debug endpoint to check which data source is being used"""
     try:
-        force_use_sheets = os.getenv('FORCE_USE_SHEETS', 'false').lower() == 'true'
         
         # Check Base configuration
         base_config = {
@@ -1767,24 +1674,12 @@ def debug_data_source():
         base_result = None
         base_error = None
         try:
-            if not force_use_sheets:
-                data = lark_client.get_base_data()
-                base_result = f"SUCCESS - {len(data)} rows"
-            else:
-                base_result = "SKIPPED - FORCE_USE_SHEETS enabled"
+            data = lark_client.get_base_data()
+            base_result = f"SUCCESS - {len(data)} rows"
         except Exception as e:
             base_error = str(e)
             base_result = f"FAILED - {base_error}"
         
-        # Try Sheets API
-        sheets_result = None
-        sheets_error = None
-        try:
-            sheets_data = lark_client.get_sheet_data()
-            sheets_result = f"SUCCESS - {len(sheets_data)} rows"
-        except Exception as e:
-            sheets_error = str(e)
-            sheets_result = f"FAILED - {sheets_error}"
         
         # What get_data() actually returns
         actual_data = lark_client.get_data()
@@ -1792,17 +1687,84 @@ def debug_data_source():
         
         return jsonify({
             "success": True,
-            "force_use_sheets": force_use_sheets,
             "base_config": base_config,
             "base_api_test": base_result,
             "base_error": base_error,
-            "sheets_api_test": sheets_result,
-            "sheets_error": sheets_error,
             "actual_data_returned": actual_result,
             "environment": {
                 "app_id": os.getenv('LARK_APP_ID', '')[:10] + "..." if os.getenv('LARK_APP_ID') else None,
                 "app_secret": "SET" if os.getenv('LARK_APP_SECRET') else "NOT SET"
             }
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/debug-evaluation-logic')
+def debug_evaluation_logic():
+    """Debug the evaluation logic specifically"""
+    try:
+        data = lark_client.get_data()
+        today = datetime.now().date()
+        
+        debug_info = {
+            "total_rows": len(data),
+            "today": str(today),
+            "employees_checked": 0,
+            "employees_with_probation_days": 0,
+            "employees_with_contract_days": 0,
+            "employees_in_range_19_23": 0,
+            "sample_employees": []
+        }
+        
+        # Process like check_and_send_reminders does
+        for row_index, employee in enumerate(data[1:], start=1):
+            if len(employee) < 12:
+                continue
+                
+            debug_info["employees_checked"] += 1
+            
+            employee_name = employee[0]
+            probation_remaining_days = employee[10] if len(employee) > 10 else None
+            contract_remaining_days = employee[11] if len(employee) > 11 else None
+            
+            prob_days_int = None
+            cont_days_int = None
+            
+            # Check probation
+            if probation_remaining_days is not None and probation_remaining_days != '':
+                debug_info["employees_with_probation_days"] += 1
+                try:
+                    prob_days_int = int(float(str(probation_remaining_days)))
+                    if 19 <= prob_days_int <= 23:
+                        debug_info["employees_in_range_19_23"] += 1
+                        if len(debug_info["sample_employees"]) < 5:
+                            debug_info["sample_employees"].append({
+                                "name": employee_name,
+                                "type": "Probation",
+                                "days": prob_days_int
+                            })
+                except:
+                    pass
+            
+            # Check contract
+            if contract_remaining_days is not None and contract_remaining_days != '':
+                debug_info["employees_with_contract_days"] += 1
+                try:
+                    cont_days_int = int(float(str(contract_remaining_days)))
+                    if 19 <= cont_days_int <= 23:
+                        debug_info["employees_in_range_19_23"] += 1
+                        if len(debug_info["sample_employees"]) < 5:
+                            debug_info["sample_employees"].append({
+                                "name": employee_name,
+                                "type": "Contract", 
+                                "days": cont_days_int
+                            })
+                except:
+                    pass
+        
+        return jsonify({
+            "success": True,
+            "debug_info": debug_info
         })
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
