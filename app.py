@@ -293,11 +293,11 @@ class LarkClient:
         # Convert Base record format to our expected format
         extracted_data = []
         
-        # Add header row
+        # Add header row (including remaining days fields)
         header_row = [
             "Employee Name", "Leader Name", "Contract Renewal Date", 
             "Probation Period End Date", "Employee Status", "Position", "Leader Email",
-            "Leader CRM", "Department", "Employee CRM"
+            "Leader CRM", "Department", "Employee CRM", "Probation Remaining Days", "Contract Remaining Days"
         ]
         extracted_data.append(header_row)
         
@@ -393,7 +393,10 @@ class LarkClient:
                         ('Leader Email', ['Direct Leader Email']),
                         ('Leader CRM', ['Direct Leader CRM']),
                         ('Department', ['Department']),
-                        ('Employee CRM', ['CRM'])
+                        ('Employee CRM', ['CRM']),
+                        # Add the remaining days fields
+                        ('Probation Remaining Days', ['Probation Period Remaining Days']),
+                        ('Contract Remaining Days', ['Remaining Limited Contract End Days'])
                     ]
                     
                     extracted_row = []
@@ -833,16 +836,18 @@ def check_and_send_reminders(employees_data, additional_cc_emails=None):
         if len(employee) < 9:  # Now we need 9 columns for new structure
             continue
             
-        employee_name = employee[0]  # I - Employee Name
-        leader_name = employee[1]  # Leader Name (empty in new structure)
-        contract_renewal = employee[2]  # O - Contract Renewal Date
-        probation_end = employee[3]  # P - Probation Period End Date
-        employee_status = employee[4]  # AB - Employee Status
+        employee_name = employee[0]  # Employee Name
+        leader_name = employee[1]  # Leader Name (Direct Leader CRM)
+        contract_renewal = employee[2]  # Contract Renewal Date
+        probation_end = employee[3]  # Probation Period End Date
+        employee_status = employee[4]  # Employee Status
         position = employee[5]  # Position
-        leader_email_raw = employee[6]  # G - Leader Email
-        leader_crm = employee[7]  # F - Leader CRM
-        department = employee[8]  # H - Department
-        employee_crm = employee[9]  # C - Employee CRM
+        leader_email_raw = employee[6]  # Leader Email
+        leader_crm = employee[7]  # Leader CRM
+        department = employee[8]  # Department
+        employee_crm = employee[9]  # Employee CRM
+        probation_remaining_days = employee[10] if len(employee) > 10 else None  # Probation Remaining Days
+        contract_remaining_days = employee[11] if len(employee) > 11 else None  # Contract Remaining Days
         
         leader_email = extract_email(leader_email_raw)
         
@@ -854,49 +859,35 @@ def check_and_send_reminders(employees_data, additional_cc_emails=None):
         employee_leader_key = f"{employee_name.strip()}|{leader_email}"
         
         # Determine which evaluation is more urgent and closer to deadline
-        probation_days = None
-        contract_days = None
         chosen_evaluation = None
         chosen_date = None
         chosen_days = None
         
-        # Check probation end date
-        if probation_end:
+        # Check probation remaining days (direct from Base)
+        if probation_remaining_days is not None:
             try:
-                if isinstance(probation_end, (int, float)):
-                    eval_date = excel_date_to_python(probation_end).date()
-                else:
-                    eval_date = datetime.strptime(str(probation_end), "%Y-%m-%d").date()
-                
-                days_until = (eval_date - today).days
-                
+                days_remaining = int(float(str(probation_remaining_days)))
                 # STRICT: Only EXACTLY 20 days
-                if days_until == 20:
-                    probation_days = days_until
-                    if chosen_evaluation is None or days_until < chosen_days:
-                        chosen_evaluation = "Probation Period Evaluation"
-                        chosen_date = eval_date
-                        chosen_days = days_until
+                if days_remaining == 20:
+                    chosen_evaluation = "Probation Period Evaluation"
+                    chosen_days = days_remaining
+                    # Calculate the date
+                    chosen_date = today + timedelta(days=days_remaining)
             except:
                 pass
         
-        # Check contract renewal date  
-        if contract_renewal:
+        # Check contract remaining days (direct from Base)  
+        if contract_remaining_days is not None:
             try:
-                if isinstance(contract_renewal, (int, float)):
-                    eval_date = excel_date_to_python(contract_renewal).date()
-                else:
-                    eval_date = datetime.strptime(str(contract_renewal), "%Y-%m-%d").date()
-                
-                days_until = (eval_date - today).days
-                
+                days_remaining = int(float(str(contract_remaining_days)))
                 # STRICT: Only EXACTLY 20 days
-                if days_until == 20:
-                    contract_days = days_until
-                    if chosen_evaluation is None or days_until < chosen_days:
+                if days_remaining == 20:
+                    # If probation is also 20 days, probation takes priority
+                    if chosen_evaluation is None or chosen_evaluation != "Probation Period Evaluation":
                         chosen_evaluation = "Contract Renewal Evaluation"
-                        chosen_date = eval_date
-                        chosen_days = days_until
+                        chosen_days = days_remaining
+                        # Calculate the date
+                        chosen_date = today + timedelta(days=days_remaining)
             except:
                 pass
         
