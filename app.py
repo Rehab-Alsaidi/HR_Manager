@@ -1680,6 +1680,136 @@ def debug_data_source():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route('/api/debug-railway-complete')
+def debug_railway_complete():
+    """Complete debug information for Railway deployment"""
+    try:
+        today = datetime.now().date()
+        debug_info = {
+            "timestamp": datetime.now().isoformat(),
+            "today": str(today),
+            "step1_data_fetch": {},
+            "step2_column_check": {},
+            "step3_evaluation_logic": {},
+            "step4_email_check": {}
+        }
+        
+        # Step 1: Data Fetch
+        try:
+            data = lark_client.get_data()
+            debug_info["step1_data_fetch"] = {
+                "success": True,
+                "total_rows": len(data),
+                "has_header": len(data) > 0,
+                "headers": data[0] if len(data) > 0 else [],
+                "sample_row_length": len(data[1]) if len(data) > 1 else 0
+            }
+        except Exception as e:
+            debug_info["step1_data_fetch"] = {"success": False, "error": str(e)}
+            return jsonify(debug_info)
+        
+        # Step 2: Column Check
+        if len(data) > 1:
+            sample_row = data[1]
+            debug_info["step2_column_check"] = {
+                "row_length": len(sample_row),
+                "has_12_columns": len(sample_row) >= 12,
+                "probation_days_column": sample_row[10] if len(sample_row) > 10 else "MISSING",
+                "contract_days_column": sample_row[11] if len(sample_row) > 11 else "MISSING",
+                "employee_name": sample_row[0] if len(sample_row) > 0 else "MISSING"
+            }
+        
+        # Step 3: Evaluation Logic
+        employees_checked = 0
+        employees_with_days = 0
+        employees_in_range = 0
+        sample_found = []
+        
+        for employee in data[1:]:
+            if len(employee) < 12:
+                continue
+            employees_checked += 1
+            
+            prob_days = employee[10] if employee[10] and employee[10] != '' else None
+            cont_days = employee[11] if employee[11] and employee[11] != '' else None
+            
+            has_days = False
+            if prob_days or cont_days:
+                employees_with_days += 1
+                has_days = True
+            
+            if prob_days:
+                try:
+                    days = int(float(str(prob_days)))
+                    if 19 <= days <= 23:
+                        employees_in_range += 1
+                        if len(sample_found) < 3:
+                            sample_found.append({
+                                "name": employee[0],
+                                "type": "Probation",
+                                "days": days,
+                                "leader_email": employee[6] if len(employee) > 6 else "MISSING"
+                            })
+                except:
+                    pass
+            
+            if cont_days:
+                try:
+                    days = int(float(str(cont_days)))
+                    if 19 <= days <= 23:
+                        employees_in_range += 1
+                        if len(sample_found) < 3:
+                            sample_found.append({
+                                "name": employee[0],
+                                "type": "Contract", 
+                                "days": days,
+                                "leader_email": employee[6] if len(employee) > 6 else "MISSING"
+                            })
+                except:
+                    pass
+        
+        debug_info["step3_evaluation_logic"] = {
+            "employees_checked": employees_checked,
+            "employees_with_days_data": employees_with_days,
+            "employees_in_range_19_23": employees_in_range,
+            "sample_found": sample_found
+        }
+        
+        # Step 4: Email Check
+        try:
+            from app import check_and_send_reminders
+            
+            # Mock email sending to count
+            original_send = globals().get('send_grouped_reminder_email')
+            email_count = 0
+            def mock_send(*args, **kwargs):
+                nonlocal email_count
+                email_count += 1
+                return True
+            
+            if 'send_grouped_reminder_email' in globals():
+                globals()['send_grouped_reminder_email'] = mock_send
+            
+            reminders = check_and_send_reminders(data)
+            
+            debug_info["step4_email_check"] = {
+                "reminders_generated": len(reminders),
+                "emails_would_send": email_count,
+                "sample_reminders": reminders[:3] if reminders else []
+            }
+            
+            # Restore original
+            if original_send:
+                globals()['send_grouped_reminder_email'] = original_send
+                
+        except Exception as e:
+            debug_info["step4_email_check"] = {"error": str(e)}
+        
+        return jsonify(debug_info)
+        
+    except Exception as e:
+        return jsonify({"error": str(e), "timestamp": datetime.now().isoformat()})
+
 @app.route('/api/debug-evaluation-logic')
 def debug_evaluation_logic():
     """Debug the evaluation logic specifically"""
