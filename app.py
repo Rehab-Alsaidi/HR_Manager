@@ -902,7 +902,7 @@ def todays_reminders():
         processed_employees = set()
         
         for row_index, employee in enumerate(data[1:], start=1):
-            if len(employee) < 10:  # Changed back to 10 since we're only using 10 columns
+            if len(employee) < 12:  # Need 12 columns for remaining days fields
                 continue
                 
             employee_name = employee[0]
@@ -1262,7 +1262,7 @@ def preview_reminders():
         processed_employees = set()
         
         for row_index, employee in enumerate(data[1:], start=1):
-            if len(employee) < 10:  # Changed back to 10 since we're only using 10 columns
+            if len(employee) < 12:  # Need 12 columns for remaining days fields
                 continue
                 
             employee_name = employee[0]
