@@ -419,6 +419,7 @@
             overflow: hidden;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
             backdrop-filter: blur(10px);
+            position: relative;
         }
 
         .table-header {
@@ -442,18 +443,120 @@
 
         .table-wrapper {
             overflow-x: auto;
+            position: relative;
+            scroll-behavior: smooth;
+        }
+
+        .scroll-arrows {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .scroll-arrow {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            border: 2px solid #60a5fa;
+            border-radius: 8px;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            pointer-events: auto;
+            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+            backdrop-filter: blur(10px);
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .scroll-arrow:hover {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+            border-color: #3b82f6;
+            color: white;
+            transform: scale(1.05);
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.6);
+        }
+
+        .scroll-arrow.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+
+        .scroll-indicator {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            background: rgba(31, 41, 55, 0.9);
+            padding: 0.5rem 1rem;
+            border-radius: var(--border-radius-lg);
+            border: 1px solid var(--dark-600);
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
+
+        .scroll-indicator-text {
+            font-size: 0.75rem;
+            color: var(--dark-400);
+        }
+
+        .scroll-progress {
+            width: 100px;
+            height: 4px;
+            background: var(--dark-600);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .scroll-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            border-radius: 2px;
+            transition: width 0.3s ease;
         }
 
         table {
-            width: 100%;
+            width: max-content;
+            min-width: 100%;
             border-collapse: collapse;
+            table-layout: fixed;
         }
 
         th, td {
-            padding: 1rem;
+            padding: 0.75rem;
             text-align: left;
             border-bottom: 1px solid var(--dark-600);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            vertical-align: middle;
+            box-sizing: border-box;
         }
+        
+        /* Specific column widths for better alignment */
+        th:nth-child(1), td:nth-child(1) { width: 160px; } /* Employee */
+        th:nth-child(2), td:nth-child(2) { width: 100px; } /* Leader */
+        th:nth-child(3), td:nth-child(3) { width: 120px; } /* Probation */
+        th:nth-child(4), td:nth-child(4) { width: 120px; } /* Contract */
+        th:nth-child(5), td:nth-child(5) { width: 110px; } /* Forms */
+        th:nth-child(6), td:nth-child(6) { width: 100px; } /* Status */
+        th:nth-child(7), td:nth-child(7) { width: 110px; } /* Position */
+        th:nth-child(8), td:nth-child(8) { width: 180px; } /* Leader Email */
+        th:nth-child(9), td:nth-child(9) { width: 120px; } /* Leader CRM */
+        th:nth-child(10), td:nth-child(10) { width: 120px; } /* Department */
+        th:nth-child(11), td:nth-child(11) { width: 120px; } /* Employee CRM */
 
         th {
             background: var(--dark-700);
@@ -699,9 +802,13 @@
                 <i class="fas fa-sync-alt"></i>
                 <span>Refresh Data</span>
             </button>
-            <button class="btn" onclick="sendEmails()">
-                <i class="fas fa-paper-plane"></i>
-                <span>Send Reminders</span>
+            <a href="/reminders" class="btn" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;">
+                <i class="fas fa-calendar-day"></i>
+                <span>Today's Reminders</span>
+            </a>
+            <button class="btn" onclick="previewEmails()">
+                <i class="fas fa-eye"></i>
+                <span>Preview Emails</span>
             </button>
             <button class="btn" onclick="exportData()">
                 <i class="fas fa-download"></i>
@@ -723,7 +830,26 @@
                     Employee Evaluation Overview
                 </div>
             </div>
-            <div class="table-wrapper">
+            <div class="table-wrapper" id="tableWrapper">
+                <!-- Scroll Arrows -->
+                <div class="scroll-arrows">
+                    <div class="scroll-arrow" id="scrollLeft" onclick="scrollTableLeft()" title="Scroll Left">
+                        <i class="fas fa-chevron-left"></i>
+                    </div>
+                    <div class="scroll-arrow" id="scrollRight" onclick="scrollTableRight()" title="Scroll Right">
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+                </div>
+                
+                <!-- Scroll Progress Indicator -->
+                <div class="scroll-indicator" id="scrollIndicator">
+                    <span class="scroll-indicator-text">Scroll Progress</span>
+                    <div class="scroll-progress">
+                        <div class="scroll-progress-bar" id="scrollProgressBar"></div>
+                    </div>
+                    <span class="scroll-indicator-text" id="scrollPercentage">0%</span>
+                </div>
+                
                 <table>
                     <thead>
                         <tr>
@@ -733,21 +859,25 @@
                             <th><i class="fas fa-calendar-check"></i> Contract Renewal</th>
                             <th><i class="fas fa-clipboard-list"></i> Evaluation Forms</th>
                             <th><i class="fas fa-info-circle"></i> Status</th>
+                            <th><i class="fas fa-briefcase"></i> Position</th>
                             <th><i class="fas fa-envelope"></i> Leader Email</th>
+                            <th><i class="fas fa-id-badge"></i> Leader CRM</th>
+                            <th><i class="fas fa-building"></i> Department</th>
+                            <th><i class="fas fa-user-tag"></i> Employee CRM</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% if employees and employees|length > 1 %}
                             {% for employee in employees[1:] %}
-                            {% if employee|length >= 7 %}
+                            {% if employee|length >= 11 %}
                             <tr>
                                 <td class="employee-name">
                                     <div class="employee-avatar">
-                                        {{ employee[0][0].upper() if employee[0] else 'U' }}
+                                        {{ employee[0][0].upper() if employee[0] and employee[0]|length > 0 else 'U' }}
                                     </div>
                                     <span>{{ employee[0] or '-' }}</span>
                                 </td>
-                                <td class="leader-name">{{ employee[1] or '-' }}</td>
+                                <td class="leader-name">{{ employee[1] or 'Manager' }}</td>
                                 <td class="date-cell">
                                     <span class="date-normal">{{ employee[2] or '-' }}</span>
                                 </td>
@@ -755,19 +885,26 @@
                                     <span class="date-normal">{{ employee[3] or '-' }}</span>
                                 </td>
                                 <td style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                                    <a href="https://docs.google.com/forms/d/e/1FAIpQLSdTzbajU0IK9Lz6VItd7D-ZdWlQZ2qvEsiJtBvFmpIEJQgf7Q/viewform" 
-                                       target="_blank" 
-                                       class="evaluation-link">
-                                        <i class="fas fa-user-clock"></i>
-                                        <span>Probation</span>
-                                    </a>
-                                    <a href="https://docs.google.com/forms/d/e/1FAIpQLSeQYmb6WILCIwW6q_FZ-klsAdhScQ-FuMDP_rUYpMkFltrzvA/viewform" 
-                                       target="_blank" 
-                                       class="evaluation-link" 
-                                       style="background: rgba(5, 150, 105, 0.1); border-color: var(--secondary); color: var(--secondary);">
-                                        <i class="fas fa-file-contract"></i>
-                                        <span>Contract</span>
-                                    </a>
+                                    {% if employee[4] %}
+                                        <a href="{{ employee[4] }}" 
+                                           target="_blank" 
+                                           class="evaluation-link">
+                                            {% if 'probation' in employee[4]|lower %}
+                                                <i class="fas fa-user-clock"></i>
+                                                <span>Probation</span>
+                                            {% else %}
+                                                <i class="fas fa-file-contract"></i>
+                                                <span>Contract</span>
+                                            {% endif %}
+                                        </a>
+                                    {% else %}
+                                        <a href="https://docs.google.com/forms/d/e/1FAIpQLSdTzbajU0IK9Lz6VItd7D-ZdWlQZ2qvEsiJtBvFmpIEJQgf7Q/viewform" 
+                                           target="_blank" 
+                                           class="evaluation-link">
+                                            <i class="fas fa-user-clock"></i>
+                                            <span>Probation</span>
+                                        </a>
+                                    {% endif %}
                                 </td>
                                 <td>
                                     {% set status = employee[5] or 'Pending' %}
@@ -782,23 +919,23 @@
                                         <span>{{ status }}</span>
                                     </span>
                                 </td>
+                                <td class="email-cell">{{ employee[6] or '-' }}</td>
                                 <td class="email-cell">
-                                    {% if employee[6] %}
-                                        {% if employee[6] is iterable and employee[6] is not string %}
-                                            {{ employee[6][0]['text'] if employee[6][0] and 'text' in employee[6][0] else '-' }}
-                                        {% else %}
-                                            {{ employee[6] }}
-                                        {% endif %}
+                                    {% if employee[7] and employee[7] != '0' and employee[7].strip() %}
+                                        {{ employee[7] }}
                                     {% else %}
                                         -
                                     {% endif %}
                                 </td>
+                                <td class="email-cell">{{ employee[8] or '-' }}</td>
+                                <td class="email-cell">{{ employee[9] or '-' }}</td>
+                                <td class="email-cell">{{ employee[10] or '-' }}</td>
                             </tr>
                             {% endif %}
                             {% endfor %}
                         {% else %}
                             <tr>
-                                <td colspan="7" style="text-align: center; padding: 4rem; color: var(--dark-500);">
+                                <td colspan="11" style="text-align: center; padding: 4rem; color: var(--dark-500);">
                                     <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;"></i>
                                     <div style="font-size: 1.1rem; margin-bottom: 0.5rem;">No employee data found</div>
                                     <small style="opacity: 0.7;">Please check your sheet configuration and refresh</small>
@@ -885,18 +1022,22 @@
         // Export Data Function
         function exportData() {
             const rows = document.querySelectorAll('tbody tr:not([style*="display: none"])');
-            let csv = 'Employee Name,Leader Name,Probation End,Contract Renewal,Status,Leader Email\\n';
+            let csv = 'Employee Name,Leader Name,Probation End,Contract Renewal,Status,Position,Leader Email,Leader CRM,Department,Employee CRM\\n';
             
             rows.forEach(row => {
                 const cells = row.querySelectorAll('td');
-                if (cells.length >= 6) {
+                if (cells.length >= 11) {
                     const data = [
                         cells[0].querySelector('span').textContent.trim(),
                         cells[1].textContent.trim(),
                         cells[2].textContent.trim(),
                         cells[3].textContent.trim(),
                         cells[5].querySelector('span').textContent.trim(),
-                        cells[6].textContent.trim()
+                        cells[6].textContent.trim(),
+                        cells[7].textContent.trim(),
+                        cells[8].textContent.trim(),
+                        cells[9].textContent.trim(),
+                        cells[10].textContent.trim()
                     ];
                     csv += data.map(field => `"${field}"`).join(',') + '\\n';
                 }
@@ -1017,11 +1158,11 @@
                     const timeDiff = targetDate.getTime() - today.getTime();
                     const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
                     
-                    if (daysDiff <= 20 && daysDiff >= 0) {
+                    if (daysDiff <= 25 && daysDiff >= 0) {
                         cell.className = 'date-urgent';
                         cell.innerHTML = `<i class="fas fa-exclamation-triangle"></i><span>${dateText} (${daysDiff} days)</span>`;
                         urgentCount++;
-                    } else if (daysDiff <= 30 && daysDiff > 20) {
+                    } else if (daysDiff <= 30 && daysDiff > 25) {
                         cell.className = 'date-warning';
                         cell.innerHTML = `<i class="fas fa-clock"></i><span>${dateText} (${daysDiff} days)</span>`;
                         warningCount++;
@@ -1040,7 +1181,7 @@
             document.getElementById('warningCount').textContent = warningCount;
             
             if (urgentCount > 0) {
-                showAlert(`🚨 Critical: ${urgentCount} evaluation(s) due within 20 days require immediate attention!`, 'error');
+                showAlert(`🚨 Critical: ${urgentCount} evaluation(s) due within 25 days require immediate attention!`, 'error');
             } else if (warningCount > 0) {
                 showAlert(`⚠️ Notice: ${warningCount} evaluation(s) due within 30 days. Plan accordingly.`, 'success');
             }
@@ -1059,17 +1200,94 @@
             }, 800);
         }
 
-        function sendEmails() {
+        function previewEmails() {
+            const btn = event.target.closest('.btn');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<div class="loading"><div class="spinner"></div><span>Loading...</span></div>';
+            btn.disabled = true;
+            
+            fetch('/api/preview-reminders')
+                .then(response => response.json())
+                .then(data => {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                    
+                    if (data.success) {
+                        if (data.preview.length > 0) {
+                            showEmailPreview(data.preview);
+                        } else {
+                            showToast('All Up to Date', 'No reminders needed at this time', 'info');
+                        }
+                    } else {
+                        showToast('Error', 'Failed to load preview: ' + data.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                    showToast('Network Error', error.message, 'error');
+                });
+        }
+
+        function showEmailPreview(previewData) {
+            const modal = document.getElementById('emailPreviewModal');
+            const content = document.getElementById('emailPreviewContent');
+            
+            let html = '<div style="color: var(--dark-200);">';
+            html += `<p style="margin-bottom: 1rem; font-weight: 500;">Ready to send ${previewData.length} email(s) to the following leaders:</p>`;
+            
+            previewData.forEach((group, index) => {
+                html += `
+                    <div style="margin-bottom: 1.5rem; padding: 1rem; background: var(--dark-700); border-radius: var(--border-radius); border: 1px solid var(--dark-600);">
+                        <div style="margin-bottom: 0.75rem;">
+                            <strong style="color: var(--dark-100);">${group.leader_name}</strong> 
+                            <span style="color: var(--dark-400);">(${group.leader_email})</span>
+                        </div>
+                        <div style="margin-bottom: 0.5rem; color: var(--dark-300); font-size: 0.9rem;">
+                            <strong>Type:</strong> ${group.evaluation_type}
+                        </div>
+                        <div style="color: var(--dark-300); font-size: 0.9rem;">
+                            <strong>Employees (${group.employee_count}):</strong>
+                            ${group.employees.map(emp => `
+                                <div style="margin-left: 1rem; margin-top: 0.25rem;">
+                                    • ${emp.name} (${emp.department}) - Due: ${emp.deadline_date} (${emp.days_remaining} days)
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            content.innerHTML = html;
+            modal.style.display = 'block';
+        }
+
+        function closeEmailPreview() {
+            document.getElementById('emailPreviewModal').style.display = 'none';
+        }
+
+        function confirmSendEmails() {
+            const ccEmails = document.getElementById('ccEmails').value.trim();
             const btn = event.target.closest('.btn');
             const originalHTML = btn.innerHTML;
             btn.innerHTML = '<div class="loading"><div class="spinner"></div><span>Sending...</span></div>';
             btn.disabled = true;
             
-            fetch('/api/send-reminders')
+            const requestData = ccEmails ? { cc_emails: ccEmails } : {};
+            
+            fetch('/api/send-reminders', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            })
                 .then(response => response.json())
                 .then(data => {
                     btn.innerHTML = originalHTML;
                     btn.disabled = false;
+                    closeEmailPreview();
                     
                     if (data.success) {
                         const count = data.sent_reminders.length;
@@ -1080,7 +1298,8 @@
                         document.getElementById('todayEmailsSent').textContent = currentTodayCount + count;
                         
                         if (count > 0) {
-                            showToast('Emails Sent Successfully', `${count} reminder email(s) sent to team leaders`, 'success');
+                            const ccNote = ccEmails ? ` (CC: ${ccEmails})` : '';
+                            showToast('Emails Sent Successfully', `${count} reminder email(s) sent to team leaders${ccNote}`, 'success');
                             
                             // Update status badges for sent emails
                             data.sent_reminders.forEach(reminder => {
@@ -1098,6 +1317,7 @@
                 .catch(error => {
                     btn.innerHTML = originalHTML;
                     btn.disabled = false;
+                    closeEmailPreview();
                     showToast('Network Error', error.message, 'error');
                 });
         }
@@ -1120,6 +1340,54 @@
             }
         }
 
+
+        // Horizontal Scroll Functions
+        function scrollTableLeft() {
+            const wrapper = document.getElementById('tableWrapper');
+            wrapper.scrollBy({ left: -200, behavior: 'smooth' });
+        }
+
+        function scrollTableRight() {
+            const wrapper = document.getElementById('tableWrapper');
+            wrapper.scrollBy({ left: 200, behavior: 'smooth' });
+        }
+
+        function updateScrollIndicators() {
+            const wrapper = document.getElementById('tableWrapper');
+            const scrollLeft = wrapper.scrollLeft;
+            const scrollWidth = wrapper.scrollWidth - wrapper.clientWidth;
+            const scrollPercentage = scrollWidth > 0 ? (scrollLeft / scrollWidth) * 100 : 0;
+            
+            // Update progress bar
+            const progressBar = document.getElementById('scrollProgressBar');
+            const percentageText = document.getElementById('scrollPercentage');
+            progressBar.style.width = scrollPercentage + '%';
+            percentageText.textContent = Math.round(scrollPercentage) + '%';
+            
+            // Update arrow states
+            const leftArrow = document.getElementById('scrollLeft');
+            const rightArrow = document.getElementById('scrollRight');
+            
+            if (scrollLeft <= 0) {
+                leftArrow.classList.add('disabled');
+            } else {
+                leftArrow.classList.remove('disabled');
+            }
+            
+            if (scrollLeft >= scrollWidth - 1) {
+                rightArrow.classList.add('disabled');
+            } else {
+                rightArrow.classList.remove('disabled');
+            }
+            
+            // Show/hide scroll indicator based on need
+            const scrollIndicator = document.getElementById('scrollIndicator');
+            if (scrollWidth > 10) {
+                scrollIndicator.style.display = 'flex';
+            } else {
+                scrollIndicator.style.display = 'none';
+            }
+        }
 
         // Initialize with enhanced animations
         document.addEventListener('DOMContentLoaded', function() {
@@ -1153,6 +1421,16 @@
                 }, 800 + (index * 50));
             });
             
+            // Initialize scroll indicators
+            updateScrollIndicators();
+            
+            // Add scroll event listener
+            const wrapper = document.getElementById('tableWrapper');
+            wrapper.addEventListener('scroll', updateScrollIndicators);
+            
+            // Update scroll indicators on window resize
+            window.addEventListener('resize', updateScrollIndicators);
+            
             // Welcome toast
             setTimeout(() => {
                 showToast('Welcome to HR Manager', 'Dashboard loaded successfully with live metrics', 'success');
@@ -1175,5 +1453,37 @@
         `;
         document.head.appendChild(style);
     </script>
+
+    <!-- Email Preview Modal -->
+    <div id="emailPreviewModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--dark-800); border-radius: var(--border-radius-xl); padding: 2rem; width: 90%; max-width: 800px; max-height: 80vh; overflow-y: auto; border: 1px solid var(--glass-border);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;">
+                <h2 style="color: var(--dark-100); margin: 0;">Email Preview</h2>
+                <button onclick="closeEmailPreview()" style="background: none; border: none; color: var(--dark-400); font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; color: var(--dark-300); margin-bottom: 0.5rem; font-weight: 500;">CC Emails (comma-separated):</label>
+                <input type="email" id="ccEmails" placeholder="email1@example.com, email2@example.com" 
+                       style="width: 100%; padding: 0.75rem; border-radius: var(--border-radius); border: 1px solid var(--dark-600); background: var(--dark-700); color: var(--dark-100); font-size: 0.9rem;" multiple>
+            </div>
+            
+            <div id="emailPreviewContent" style="margin-bottom: 1.5rem;">
+                <!-- Preview content will be loaded here -->
+            </div>
+            
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button onclick="closeEmailPreview()" class="btn" style="background: var(--dark-600);">
+                    <i class="fas fa-times"></i>
+                    <span>Cancel</span>
+                </button>
+                <button onclick="confirmSendEmails()" class="btn" style="background: linear-gradient(135deg, #059669, #10b981);">
+                    <i class="fas fa-paper-plane"></i>
+                    <span>Send Emails</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

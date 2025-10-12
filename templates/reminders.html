@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Today's Email Reminders - Professional</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1f2937;
+            --primary-light: #374151;
+            --primary-dark: #111827;
+            --secondary: #6b7280;
+            --accent: #4b5563;
+            --success: #065f46;
+            --warning: #92400e;
+            --danger: #991b1b;
+            --info: #155e75;
+            
+            --dark-900: #111827;
+            --dark-800: #1f2937;
+            --dark-700: #374151;
+            --dark-600: #4b5563;
+            --dark-500: #6b7280;
+            --dark-400: #9ca3af;
+            --dark-300: #d1d5db;
+            --dark-200: #e5e7eb;
+            --dark-100: #f3f4f6;
+            
+            --white: #ffffff;
+            --glass: rgba(31, 41, 55, 0.95);
+            --glass-border: rgba(75, 85, 99, 0.2);
+            --backdrop: rgba(17, 24, 39, 0.95);
+            
+            --shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-lg: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-xl: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            
+            --border-radius: 6px;
+            --border-radius-lg: 8px;
+            --border-radius-xl: 10px;
+            --border-radius-2xl: 12px;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: radial-gradient(ellipse at top, rgba(59, 130, 246, 0.05) 0%, var(--dark-900) 50%);
+            color: var(--dark-200);
+            line-height: 1.5;
+            min-height: 100vh;
+            margin: 0;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: var(--glass);
+            border-radius: var(--border-radius-2xl);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--dark-400);
+            font-size: 1.1rem;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .stat-card {
+            background: var(--glass);
+            border-radius: var(--border-radius-xl);
+            border: 1px solid var(--glass-border);
+            padding: 1.5rem;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-card h3 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card p {
+            color: var(--dark-400);
+            font-size: 0.9rem;
+        }
+
+        .reminders-grid {
+            display: grid;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .reminder-card {
+            background: var(--glass);
+            border-radius: var(--border-radius-xl);
+            border: 1px solid var(--glass-border);
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .reminder-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .reminder-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .leader-info h3 {
+            color: var(--dark-100);
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .leader-info p {
+            color: var(--dark-400);
+            font-size: 0.9rem;
+        }
+
+        .evaluation-badge {
+            padding: 0.5rem 1rem;
+            border-radius: var(--border-radius);
+            font-size: 0.8rem;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .evaluation-probation {
+            background: rgba(239, 68, 68, 0.1);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .evaluation-contract {
+            background: rgba(59, 130, 246, 0.1);
+            color: #93c5fd;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .employees-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .employees-section h4 {
+            color: var(--dark-200);
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .employee-list {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .employee-item {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 100px;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            background: var(--dark-700);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--dark-600);
+        }
+
+        .employee-name {
+            font-weight: 600;
+            color: var(--dark-100);
+        }
+
+        .employee-department {
+            color: var(--dark-300);
+            font-size: 0.9rem;
+        }
+
+        .employee-deadline {
+            color: var(--dark-300);
+            font-size: 0.9rem;
+        }
+
+        .days-remaining {
+            text-align: center;
+            font-weight: 600;
+            padding: 0.25rem 0.5rem;
+            border-radius: var(--border-radius);
+            font-size: 0.8rem;
+        }
+
+        .days-urgent {
+            background: rgba(239, 68, 68, 0.1);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .days-warning {
+            background: rgba(245, 158, 11, 0.1);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .days-normal {
+            background: rgba(34, 197, 94, 0.1);
+            color: #86efac;
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        .cc-section {
+            background: var(--dark-700);
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--dark-600);
+        }
+
+        .cc-section h5 {
+            color: var(--dark-200);
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .cc-emails {
+            color: var(--dark-300);
+            font-size: 0.8rem;
+            word-break: break-all;
+        }
+
+        .send-section {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+        }
+
+        .send-btn {
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: var(--border-radius-xl);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: var(--shadow-xl);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .no-reminders {
+            text-align: center;
+            padding: 3rem 2rem;
+            background: var(--glass);
+            border-radius: var(--border-radius-xl);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+        }
+
+        .no-reminders i {
+            font-size: 3rem;
+            color: var(--dark-400);
+            margin-bottom: 1rem;
+        }
+
+        .no-reminders h3 {
+            color: var(--dark-200);
+            margin-bottom: 0.5rem;
+        }
+
+        .no-reminders p {
+            color: var(--dark-400);
+        }
+
+        .navigation {
+            margin-bottom: 2rem;
+        }
+
+        .nav-btn {
+            background: var(--dark-700);
+            color: var(--dark-200);
+            border: 1px solid var(--dark-600);
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--border-radius);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: var(--dark-600);
+            transform: translateY(-1px);
+        }
+
+        .loading {
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .toast {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            border-radius: var(--border-radius);
+            color: white;
+            font-weight: 500;
+            z-index: 2000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.success {
+            background: linear-gradient(135deg, #059669, #10b981);
+        }
+
+        .toast.error {
+            background: linear-gradient(135deg, #dc2626, #ef4444);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="navigation">
+            <a href="/" class="nav-btn">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to Dashboard</span>
+            </a>
+        </div>
+
+        <div class="header">
+            <h1><i class="fas fa-calendar-day"></i> Today's Email Reminders</h1>
+            <p>Employee evaluations requiring immediate attention - {{ today_date }}</p>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <h3 style="background: linear-gradient(45deg, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">{{ total_reminders }}</h3>
+                <p>Email Groups</p>
+            </div>
+            <div class="stat-card">
+                <h3 style="background: linear-gradient(45deg, #059669, #10b981); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">{{ total_employees }}</h3>
+                <p>Employees</p>
+            </div>
+            <div class="stat-card">
+                <h3 style="background: linear-gradient(45deg, #dc2626, #ef4444); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                    {% set urgent_count = reminders|selectattr('employees')|map(attribute='employees')|list|map('selectattr', 'days_remaining', 'le', 5)|map('list')|map('length')|sum %}
+                    {{ urgent_count }}
+                </h3>
+                <p>Urgent (≤5 days)</p>
+            </div>
+        </div>
+
+        <div class="reminders-grid">
+            {% if reminders %}
+                {% for reminder in reminders %}
+                <div class="reminder-card">
+                    <div class="reminder-header">
+                        <div class="leader-info">
+                            <h3>{{ reminder.leader_name }}</h3>
+                            <p><i class="fas fa-envelope"></i> {{ reminder.leader_email }}</p>
+                            <p><i class="fas fa-building"></i> Departments: {{ reminder.departments }}</p>
+                        </div>
+                        <div class="evaluation-badge {% if 'Probation' in reminder.evaluation_type %}evaluation-probation{% else %}evaluation-contract{% endif %}">
+                            {{ reminder.evaluation_type }}
+                        </div>
+                    </div>
+
+                    <div class="employees-section">
+                        <h4><i class="fas fa-users"></i> Employees ({{ reminder.employee_count }})</h4>
+                        <div class="employee-list">
+                            {% for employee in reminder.employees %}
+                            <div class="employee-item">
+                                <div class="employee-name">{{ employee.name }}</div>
+                                <div class="employee-department">{{ employee.department or 'N/A' }}</div>
+                                <div class="employee-deadline">Due: {{ employee.deadline_date }}</div>
+                                <div class="days-remaining {% if employee.days_remaining <= 5 %}days-urgent{% elif employee.days_remaining <= 10 %}days-warning{% else %}days-normal{% endif %}">
+                                    {{ employee.days_remaining }} days
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="cc-section">
+                        <h5><i class="fas fa-copy"></i> CC Recipients (Auto-assigned by Department)</h5>
+                        <div class="cc-emails">{{ reminder.cc_emails }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="no-reminders">
+                    <i class="fas fa-check-circle"></i>
+                    <h3>All Caught Up!</h3>
+                    <p>No email reminders need to be sent today. All evaluations are on track.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if reminders %}
+    <div class="send-section">
+        <button class="send-btn" onclick="sendAllEmails()" id="sendButton">
+            <i class="fas fa-paper-plane"></i>
+            <span>Send All {{ total_reminders }} Email{{ 's' if total_reminders != 1 else '' }}</span>
+            <div class="loading" id="loadingSpinner">
+                <div class="spinner"></div>
+                <span>Sending...</span>
+            </div>
+        </button>
+    </div>
+    {% endif %}
+
+    <script>
+        function sendAllEmails() {
+            const button = document.getElementById('sendButton');
+            const spinner = document.getElementById('loadingSpinner');
+            const buttonText = button.querySelector('span');
+            
+            // Show loading state
+            buttonText.style.display = 'none';
+            spinner.style.display = 'flex';
+            button.disabled = true;
+            
+            fetch('/api/send-reminders', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({})
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Reset button state
+                buttonText.style.display = 'block';
+                spinner.style.display = 'none';
+                button.disabled = false;
+                
+                if (data.success) {
+                    const count = data.sent_reminders.length;
+                    showToast(`Success! ${count} email${count !== 1 ? 's' : ''} sent successfully.`, 'success');
+                    
+                    // Refresh page after 2 seconds
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2000);
+                } else {
+                    showToast(`Error: ${data.error}`, 'error');
+                }
+            })
+            .catch(error => {
+                // Reset button state
+                buttonText.style.display = 'block';
+                spinner.style.display = 'none';
+                button.disabled = false;
+                
+                showToast(`Network Error: ${error.message}`, 'error');
+            });
+        }
+
+        function showToast(message, type) {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            // Show toast
+            setTimeout(() => toast.classList.add('show'), 100);
+            
+            // Hide toast after 4 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => document.body.removeChild(toast), 300);
+            }, 4000);
+        }
+    </script>
+</body>
+</html>

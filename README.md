@@ -4,7 +4,7 @@ A Flask-based HR evaluation management system that automatically sends reminder 
 
 ## Features
 
-- **Automated Email Reminders**: Sends email notifications to team leaders 20 days before evaluation deadlines
+- **Automated Email Reminders**: Sends email notifications to team leaders 19-25 days before evaluation deadlines
 - **Lark/Feishu Integration**: Fetches employee data from Lark spreadsheets
 - **Dual Evaluation Types**: Handles both probation period and contract renewal evaluations
 - **Web Dashboard**: View all employees and their evaluation status
@@ -105,7 +105,7 @@ The application creates three main tables:
 
 1. **Data Fetching**: Retrieves employee data from Lark spreadsheet
 2. **Date Processing**: Converts Excel date formats to Python datetime
-3. **Reminder Logic**: Identifies employees with evaluations due within 20 days
+3. **Reminder Logic**: Identifies employees with evaluations due within 19-25 days
 4. **Email Sending**: Sends HTML/text emails to team leaders
 5. **Status Tracking**: Updates employee status to prevent duplicate emails
 
