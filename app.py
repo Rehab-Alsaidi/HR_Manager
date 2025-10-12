@@ -867,8 +867,8 @@ def check_and_send_reminders(employees_data, additional_cc_emails=None):
         if probation_remaining_days is not None:
             try:
                 days_remaining = int(float(str(probation_remaining_days)))
-                # STRICT: Only EXACTLY 20 days
-                if days_remaining == 20:
+                # Check for 19-23 days remaining
+                if 19 <= days_remaining <= 23:
                     chosen_evaluation = "Probation Period Evaluation"
                     chosen_days = days_remaining
                     # Calculate the date
@@ -880,8 +880,8 @@ def check_and_send_reminders(employees_data, additional_cc_emails=None):
         if contract_remaining_days is not None:
             try:
                 days_remaining = int(float(str(contract_remaining_days)))
-                # STRICT: Only EXACTLY 20 days
-                if days_remaining == 20:
+                # Check for 19-23 days remaining
+                if 19 <= days_remaining <= 23:
                     # If probation is also 20 days, probation takes priority
                     if chosen_evaluation is None or chosen_evaluation != "Probation Period Evaluation":
                         chosen_evaluation = "Contract Renewal Evaluation"
