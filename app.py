@@ -366,7 +366,7 @@ class LarkClient:
                                 return date_str
                         return ""
                     
-                    # Map new Base column structure
+                    # Map actual Base column structure to expected output format
                     field_mappings = [
                         ('Employee Name', ['Employee Name']),
                         ('Leader Name', ['Direct Leader CRM']),  # Using Leader CRM as leader name for now
@@ -490,12 +490,19 @@ class LarkClient:
     
     def get_data(self):
         """Get data from Lark Base with fallback to Sheets"""
-        try:
-            data = self.get_base_data()
-        except Exception as base_error:
-            print(f"❌ Base access failed: {base_error}")
-            print("📄 Falling back to Sheets API...")
+        # Force use Sheets for now until Base permissions are fixed
+        force_use_sheets = os.getenv('FORCE_USE_SHEETS', 'false').lower() == 'true'
+        
+        if force_use_sheets:
+            print("🔧 FORCE_USE_SHEETS enabled - using Sheet API directly")
             data = self.get_sheet_data()
+        else:
+            try:
+                data = self.get_base_data()
+            except Exception as base_error:
+                print(f"❌ Base access failed: {base_error}")
+                print("📄 Falling back to Sheets API...")
+                data = self.get_sheet_data()
         
         # Sync data to database if available
         try:
@@ -1640,6 +1647,148 @@ def test_database_sync():
             "message": "Data synced successfully",
             "employees_synced": employee_count,
             "total_rows_from_feishu": len(data) - 1  # Subtract header row
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        })
+
+@app.route('/api/debug-railway-issue')
+def debug_railway_issue():
+    """Debug why Railway shows different results than local"""
+    try:
+        from datetime import datetime
+        
+        # Check environment
+        env_check = {
+            "LARK_APP_ID": os.getenv('LARK_APP_ID', 'NOT_SET'),
+            "LARK_APP_SECRET": os.getenv('LARK_APP_SECRET', 'NOT_SET')[:10] + "..." if os.getenv('LARK_APP_SECRET') else 'NOT_SET',
+            "LARK_BASE_APP_TOKEN": os.getenv('LARK_BASE_APP_TOKEN', 'NOT_SET'),
+            "LARK_BASE_TABLE_ID": os.getenv('LARK_BASE_TABLE_ID', 'NOT_SET'),
+            "SPREADSHEET_TOKEN": os.getenv('SPREADSHEET_TOKEN', 'NOT_SET'),
+            "DATABASE_URL": "SET" if os.getenv('DATABASE_URL') and os.getenv('DATABASE_URL') != 'postgresql://username:password@hostname:port/database' else 'NOT_SET'
+        }
+        
+        # Check current date/time
+        now = datetime.now()
+        today = now.date()
+        
+        # Try to get data
+        try:
+            data = lark_client.get_data()
+            data_source = "SUCCESS"
+            total_rows = len(data) if data else 0
+            has_employees = total_rows > 1
+        except Exception as e:
+            data_source = f"ERROR: {str(e)}"
+            total_rows = 0
+            has_employees = False
+            data = []
+        
+        # Check for employees with 20 days remaining
+        employees_20_days = []
+        if has_employees:
+            for employee in data[1:]:  # Skip header
+                if len(employee) < 10:
+                    continue
+                    
+                employee_name = employee[0]
+                if not employee_name:
+                    continue
+                    
+                probation_end = employee[3]
+                contract_renewal = employee[2]
+                leader_email = extract_email(employee[6]) if len(employee) > 6 else ""
+                
+                # Check dates
+                for date_field, eval_type in [(probation_end, "Probation"), (contract_renewal, "Contract")]:
+                    if date_field:
+                        try:
+                            if isinstance(date_field, (int, float)):
+                                eval_date = excel_date_to_python(date_field).date()
+                            else:
+                                eval_date = datetime.strptime(str(date_field), "%Y-%m-%d").date()
+                            
+                            days_until = (eval_date - today).days
+                            
+                            if days_until == 20:
+                                employees_20_days.append({
+                                    "name": employee_name,
+                                    "eval_type": eval_type,
+                                    "eval_date": eval_date.isoformat(),
+                                    "days_until": days_until,
+                                    "leader_email": leader_email,
+                                    "email_valid": is_valid_email_for_sending(leader_email)
+                                })
+                        except:
+                            pass
+        
+        return jsonify({
+            "success": True,
+            "server_time": now.isoformat(),
+            "server_date": today.isoformat(),
+            "environment_variables": env_check,
+            "data_source_status": data_source,
+            "total_data_rows": total_rows,
+            "employees_with_20_days": employees_20_days,
+            "should_send_reminders": len(employees_20_days) > 0
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        })
+
+@app.route('/api/debug-base-fields')
+def debug_base_fields():
+    """Debug actual field names and data coming from Base"""
+    try:
+        # Get raw data from Base
+        access_token = lark_client.get_access_token()
+        from app import list_bitable_records
+        
+        response_data = list_bitable_records(
+            app_token=lark_client.app_token,
+            table_id=lark_client.table_id,
+            access_token=access_token,
+            view_id=lark_client.view_id if lark_client.view_id else None,
+            page_size=5  # Just first 5 records for debugging
+        )
+        
+        records = response_data.get('items', [])
+        
+        debug_info = {
+            "total_records_available": len(records),
+            "sample_records": []
+        }
+        
+        for i, record in enumerate(records[:3]):  # Show first 3 records
+            fields = record.get("fields", {})
+            
+            # Extract key fields we're looking for
+            sample_record = {
+                "record_number": i + 1,
+                "all_field_names": list(fields.keys()),
+                "key_fields": {
+                    "Employee Name": fields.get('Employee Name'),
+                    "Direct Leader Email": fields.get('Direct Leader Email'),
+                    "Direct Leader CRM": fields.get('Direct Leader CRM'),
+                    "1st Contract Renewal Date": fields.get('1st Contract Renewal Date'),
+                    "Probation Period End Date": fields.get('Probation Period End Date'),
+                    "Department": fields.get('Department'),
+                    "Position": fields.get('Position'),
+                    "Employee Status": fields.get('Employee Status'),
+                    "CRM": fields.get('CRM')
+                }
+            }
+            debug_info["sample_records"].append(sample_record)
+        
+        return jsonify({
+            "success": True,
+            "debug_info": debug_info
         })
         
     except Exception as e:
