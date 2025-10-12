@@ -329,8 +329,11 @@ class LarkClient:
                     # Helper function to extract text from Base field values
                     def extract_base_field_value(field_value):
                         if isinstance(field_value, list) and len(field_value) > 0:
+                            # Handle arrays like Position: ["CCSM"]
+                            if isinstance(field_value[0], str):
+                                return field_value[0]  # Return first item from array
                             # Handle rich text fields
-                            if isinstance(field_value[0], dict) and 'text' in field_value[0]:
+                            elif isinstance(field_value[0], dict) and 'text' in field_value[0]:
                                 return field_value[0]['text']
                             return str(field_value[0]) if field_value[0] else ""
                         elif isinstance(field_value, dict):
@@ -341,15 +344,28 @@ class LarkClient:
                                 return field_value['name']
                         elif isinstance(field_value, str):
                             return field_value
+                        elif isinstance(field_value, (int, float)):
+                            return str(field_value)
                         elif field_value is not None:
                             return str(field_value)
                         return ""
                     
                     # Helper function to format dates from Base
                     def format_base_date(field_value):
-                        date_str = extract_base_field_value(field_value)
-                        if date_str and date_str.strip():
+                        # Handle timestamp directly if it's a number
+                        if isinstance(field_value, (int, float)) and field_value > 1000000000:
                             try:
+                                # Handle timestamp (milliseconds)
+                                date_obj = datetime.fromtimestamp(field_value / 1000)
+                                return date_obj.strftime('%Y-%m-%d')
+                            except:
+                                return ""
+                        
+                        # Handle string dates
+                        date_str = extract_base_field_value(field_value)
+                        if date_str and str(date_str).strip():
+                            try:
+                                date_str = str(date_str).strip()
                                 # Base returns dates as timestamps or YYYY-MM-DD
                                 if date_str.isdigit() and len(date_str) > 8:
                                     # Handle timestamp (milliseconds)
@@ -370,7 +386,7 @@ class LarkClient:
                     field_mappings = [
                         ('Employee Name', ['Employee Name']),
                         ('Leader Name', ['Direct Leader CRM']),  # Using Leader CRM as leader name for now
-                        ('Contract Renewal Date', ['1st Contract Renewal Date']),
+                        ('Contract Renewal Date', ['1st Contract Renewal Date', 'Limited Contract End date']),  # Try both fields
                         ('Probation Period End Date', ['Probation Period End Date']),
                         ('Employee Status', ['Employee Status']),
                         ('Position', ['Position']),
