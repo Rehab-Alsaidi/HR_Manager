@@ -270,10 +270,7 @@ class LarkClient:
             else:
                 raise Exception("LARK_USER_ACCESS_TOKEN is required when LARK_USE_USER_TOKEN is true")
         
-        # Otherwise use tenant token (cached)
-        if self.access_token and self.token_expires and datetime.now() < self.token_expires:
-            return self.access_token
-        
+        # Always refresh tenant token to avoid invalid token errors
         # Use the new get_tenant_access_token function
         try:
             self.access_token = get_tenant_access_token(self.app_id, self.app_secret)
