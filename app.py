@@ -1,19 +1,24 @@
-from flask import Flask, render_template, jsonify, request
-import smtplib
-import ssl
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from datetime import datetime, timedelta
 import json
-import psycopg2
 import os
 import random
-from dotenv import load_dotenv
+import smtplib
+import ssl
+from datetime import datetime, timedelta
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from typing import Any, Dict, List, Optional
+
+import psycopg2
 import requests
-from typing import List, Dict, Any, Optional
+from dotenv import load_dotenv
+from flask import Flask, jsonify, render_template, request
+
 from database import (
-    init_database, is_email_sent_today_db, mark_email_sent_db, 
-    cleanup_old_email_logs_db, get_sent_emails_summary
+    cleanup_old_email_logs_db,
+    get_sent_emails_summary,
+    init_database,
+    is_email_sent_today_db,
+    mark_email_sent_db,
 )
 
 # Load environment variables
@@ -27,6 +32,7 @@ class FeishuError(Exception):
     pass
 
 def set_verbose(value: bool) -> None:
+    """Set verbose mode for debugging."""
     global VERBOSE
     VERBOSE = value
 
@@ -34,22 +40,38 @@ def set_verbose(value: bool) -> None:
 set_verbose(False)
 
 def debug(message: str) -> None:
+    """Print debug message if verbose mode is enabled."""
     if VERBOSE:
         print(message)
 
 def get_tenant_access_token(app_id: str, app_secret: str) -> str:
+    """Get tenant access token from Feishu API."""
     url = f"{BASE}/auth/v3/tenant_access_token/internal"
     debug(f"[DEBUG] Getting tenant access token for app_id: {app_id}")
-    r = requests.post(url, json={"app_id": app_id, "app_secret": app_secret}, timeout=20)
+    
+    payload = {"app_id": app_id, "app_secret": app_secret}
+    r = requests.post(url, json=payload, timeout=20)
     r.raise_for_status()
+    
     data = r.json()
     debug(f"[DEBUG] Token response: {data}")
+    
     if data.get("code") != 0:
-        raise FeishuError(f"get_tenant_access_token failed: {data.get('code')} {data.get('msg')}")
-    debug(f"[DEBUG] Successfully got tenant access token")
+        error_msg = f"get_tenant_access_token failed: {data.get('code')} {data.get('msg')}"
+        raise FeishuError(error_msg)
+    
+    debug("[DEBUG] Successfully got tenant access token")
     return data["tenant_access_token"]
 
-def list_bitable_records(app_token: str, table_id: str, access_token: str, view_id: Optional[str] = None, page_token: Optional[str] = None, page_size: int = 500) -> Dict[str, Any]:
+def list_bitable_records(
+    app_token: str,
+    table_id: str,
+    access_token: str,
+    view_id: Optional[str] = None,
+    page_token: Optional[str] = None,
+    page_size: int = 500
+) -> Dict[str, Any]:
+    """List records from a Feishu bitable."""
     params: Dict[str, Any] = {'page_size': page_size}
     if view_id:
         params['view_id'] = view_id
@@ -58,93 +80,133 @@ def list_bitable_records(app_token: str, table_id: str, access_token: str, view_
 
     url = f"{BASE}/bitable/v1/apps/{app_token}/tables/{table_id}/records"
     debug(f"[DEBUG] Listing bitable records: url={url} params={params}")
+    
     try:
-        r = requests.get(url, headers={"Authorization": f"Bearer {access_token}"}, params=params, timeout=30)
+        headers = {"Authorization": f"Bearer {access_token}"}
+        r = requests.get(url, headers=headers, params=params, timeout=30)
         r.raise_for_status()
+        
         resp = r.json()
         if resp.get('code') != 0:
             error_msg = resp.get('msg', 'Unknown API error')
             print(f"[ERROR] Bitable API error {resp.get('code')}: {error_msg}")
             raise FeishuError(f"Bitable API error: {error_msg}")
+        
         return resp.get('data', {})
+    
     except requests.HTTPError as e:
-        print(f"[ERROR] HTTP error while listing bitable records: {e.response.text}")
-        raise FeishuError(f"HTTP error {e.response.status_code}: {e.response.text}")
+        error_text = e.response.text
+        print(f"[ERROR] HTTP error while listing bitable records: {error_text}")
+        raise FeishuError(f"HTTP error {e.response.status_code}: {error_text}")
+    
     except Exception as e:
         print(f"[ERROR] Unexpected error while listing bitable records: {str(e)}")
         raise FeishuError(f"Unexpected error: {str(e)}")
 
-def batch_delete_bitable_records(app_token: str, table_id: str, record_ids: List[str], access_token: str) -> Dict[str, Any]:
+def batch_delete_bitable_records(
+    app_token: str,
+    table_id: str,
+    record_ids: List[str],
+    access_token: str
+) -> Dict[str, Any]:
+    """Delete multiple records from a Feishu bitable."""
     url = f"{BASE}/bitable/v1/apps/{app_token}/tables/{table_id}/records/batch_delete"
     payload = {'record_ids': record_ids}
     debug(f"[DEBUG] Deleting bitable records: count={len(record_ids)}")
+    
     try:
-        r = requests.post(
-            url,
-            json=payload,
-            headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
-            timeout=30,
-        )
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        r = requests.post(url, json=payload, headers=headers, timeout=30)
         r.raise_for_status()
+        
         resp = r.json()
         if resp.get('code') != 0:
             error_msg = resp.get('msg', 'Unknown API error')
             print(f"[ERROR] Bitable delete error {resp.get('code')}: {error_msg}")
             raise FeishuError(f"Bitable delete error: {error_msg}")
+        
         return resp
+    
     except requests.HTTPError as e:
-        print(f"[ERROR] HTTP error while deleting bitable records: {e.response.text}")
-        raise FeishuError(f"HTTP error {e.response.status_code}: {e.response.text}")
+        error_text = e.response.text
+        print(f"[ERROR] HTTP error while deleting bitable records: {error_text}")
+        raise FeishuError(f"HTTP error {e.response.status_code}: {error_text}")
+    
     except Exception as e:
         print(f"[ERROR] Unexpected error while deleting bitable records: {str(e)}")
         raise FeishuError(f"Unexpected error: {str(e)}")
 
-def batch_create_bitable_records(app_token: str, table_id: str, records: List[Dict[str, Any]], access_token: str) -> Dict[str, Any]:
+def batch_create_bitable_records(
+    app_token: str,
+    table_id: str,
+    records: List[Dict[str, Any]],
+    access_token: str
+) -> Dict[str, Any]:
+    """Create multiple records in a Feishu bitable."""
     url = f"{BASE}/bitable/v1/apps/{app_token}/tables/{table_id}/records/batch_create"
     payload = {'records': records}
     debug(f"[DEBUG] Creating bitable records: count={len(records)}")
+    
     try:
-        r = requests.post(
-            url,
-            json=payload,
-            headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
-            timeout=30,
-        )
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        r = requests.post(url, json=payload, headers=headers, timeout=30)
         r.raise_for_status()
+        
         resp = r.json()
         if resp.get('code') != 0:
             error_msg = resp.get('msg', 'Unknown API error')
             print(f"[ERROR] Bitable create error {resp.get('code')}: {error_msg}")
             raise FeishuError(f"Bitable create error: {error_msg}")
+        
         return resp
+    
     except requests.HTTPError as e:
-        print(f"[ERROR] HTTP error while creating bitable records: {e.response.text}")
-        raise FeishuError(f"HTTP error {e.response.status_code}: {e.response.text}")
+        error_text = e.response.text
+        print(f"[ERROR] HTTP error while creating bitable records: {error_text}")
+        raise FeishuError(f"HTTP error {e.response.status_code}: {error_text}")
+    
     except Exception as e:
         print(f"[ERROR] Unexpected error while creating bitable records: {str(e)}")
         raise FeishuError(f"Unexpected error: {str(e)}")
 
-def batch_update_bitable_records(app_token: str, table_id: str, records: List[Dict[str, Any]], access_token: str) -> Dict[str, Any]:
+def batch_update_bitable_records(
+    app_token: str,
+    table_id: str,
+    records: List[Dict[str, Any]],
+    access_token: str
+) -> Dict[str, Any]:
+    """Update multiple records in a Feishu bitable."""
     url = f"{BASE}/bitable/v1/apps/{app_token}/tables/{table_id}/records/batch_update"
     payload = {'records': records}
     debug(f"[DEBUG] Updating bitable records: count={len(records)}")
+    
     try:
-        r = requests.post(
-            url,
-            json=payload,
-            headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
-            timeout=30,
-        )
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        r = requests.post(url, json=payload, headers=headers, timeout=30)
         r.raise_for_status()
+        
         resp = r.json()
         if resp.get('code') != 0:
             error_msg = resp.get('msg', 'Unknown API error')
             print(f"[ERROR] Bitable update error {resp.get('code')}: {error_msg}")
             raise FeishuError(f"Bitable update error: {error_msg}")
+        
         return resp
+    
     except requests.HTTPError as e:
-        print(f"[ERROR] HTTP error while updating bitable records: {e.response.text}")
-        raise FeishuError(f"HTTP error {e.response.status_code}: {e.response.text}")
+        error_text = e.response.text
+        print(f"[ERROR] HTTP error while updating bitable records: {error_text}")
+        raise FeishuError(f"HTTP error {e.response.status_code}: {error_text}")
+    
     except Exception as e:
         print(f"[ERROR] Unexpected error while updating bitable records: {str(e)}")
         raise FeishuError(f"Unexpected error: {str(e)}")
@@ -153,7 +215,7 @@ def batch_update_bitable_records(app_token: str, table_id: str, records: List[Di
 SENT_EMAILS_LOG = "sent_emails_log.json"
 
 def load_sent_emails_log():
-    """Load the log of previously sent emails"""
+    """Load the log of previously sent emails."""
     try:
         if os.path.exists(SENT_EMAILS_LOG):
             with open(SENT_EMAILS_LOG, 'r') as f:
@@ -163,7 +225,7 @@ def load_sent_emails_log():
     return {}
 
 def save_sent_emails_log(log_data):
-    """Save the log of sent emails"""
+    """Save the log of sent emails."""
     try:
         with open(SENT_EMAILS_LOG, 'w') as f:
             json.dump(log_data, f, indent=2)
@@ -171,11 +233,12 @@ def save_sent_emails_log(log_data):
         print(f"Error saving sent emails log: {e}")
 
 def is_email_already_sent_today(employee_name, leader_email, evaluation_type):
-    """Check if an email for this employee was already sent today (database or file)"""
+    """Check if an email for this employee was already sent today (database or file)."""
     try:
         # Try database first
         database_url = os.getenv('DATABASE_URL')
-        if database_url and database_url != 'postgresql://username:password@hostname:port/database':
+        fallback_url = 'postgresql://username:password@hostname:port/database'
+        if database_url and database_url != fallback_url:
             return is_email_sent_today_db(employee_name, leader_email, evaluation_type)
     except Exception as e:
         print(f"Database check failed, using file: {e}")
@@ -190,11 +253,12 @@ def is_email_already_sent_today(employee_name, leader_email, evaluation_type):
     return log_data.get(today, {}).get(key, False)
 
 def mark_email_as_sent(employee_name, leader_email, evaluation_type):
-    """Mark an email as sent today (database or file)"""
+    """Mark an email as sent today (database or file)."""
     try:
         # Try database first
         database_url = os.getenv('DATABASE_URL')
-        if database_url and database_url != 'postgresql://username:password@hostname:port/database':
+        fallback_url = 'postgresql://username:password@hostname:port/database'
+        if database_url and database_url != fallback_url:
             mark_email_sent_db(employee_name, leader_email, evaluation_type)
             return
     except Exception as e:
@@ -219,7 +283,7 @@ def mark_email_as_sent(employee_name, leader_email, evaluation_type):
     save_sent_emails_log(log_data)
 
 def cleanup_old_logs():
-    """Remove logs older than 30 days to prevent file from growing too large"""
+    """Remove logs older than 30 days to prevent file from growing too large."""
     log_data = load_sent_emails_log()
     cutoff_date = (datetime.now().date() - timedelta(days=30)).isoformat()
     
@@ -431,10 +495,15 @@ class LarkClient:
         return data
 
 def get_random_email_config():
-    """Get a random email configuration from the available sender emails"""
-    sender_emails = os.getenv('SENDER_EMAILS', os.getenv('SENDER_EMAIL')).split(',')
-    email_usernames = os.getenv('EMAIL_USERNAMES', os.getenv('EMAIL_USERNAME')).split(',')
-    email_passwords = os.getenv('EMAIL_PASSWORDS', os.getenv('EMAIL_PASSWORD')).split(',')
+    """Get a random email configuration from the available sender emails."""
+    sender_emails_env = os.getenv('SENDER_EMAILS', os.getenv('SENDER_EMAIL'))
+    sender_emails = sender_emails_env.split(',')
+    
+    usernames_env = os.getenv('EMAIL_USERNAMES', os.getenv('EMAIL_USERNAME'))
+    email_usernames = usernames_env.split(',')
+    
+    passwords_env = os.getenv('EMAIL_PASSWORDS', os.getenv('EMAIL_PASSWORD'))
+    email_passwords = passwords_env.split(',')
     
     # Choose a random index
     index = random.randint(0, len(sender_emails) - 1)
@@ -445,7 +514,16 @@ def get_random_email_config():
         'password': email_passwords[index].strip()
     }
 
-def send_reminder_email(employee_name, leader_name, leader_email, evaluation_link, days_remaining, evaluation_type, crm_account=""):
+def send_reminder_email(
+    employee_name,
+    leader_name,
+    leader_email,
+    evaluation_link,
+    days_remaining,
+    evaluation_type,
+    crm_account=""
+):
+    """Send evaluation reminder email to leader."""
     try:
         print(f"Attempting to send email to {leader_email} for {employee_name}")
         
@@ -457,11 +535,15 @@ def send_reminder_email(employee_name, leader_name, leader_email, evaluation_lin
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE
         
-        with smtplib.SMTP_SSL(os.getenv('SMTP_SERVER'), int(os.getenv('SMTP_PORT', 465)), context=context) as server:
+        smtp_server = os.getenv('SMTP_SERVER')
+        smtp_port = int(os.getenv('SMTP_PORT', 465))
+        
+        with smtplib.SMTP_SSL(smtp_server, smtp_port, context=context) as server:
             server.login(email_config['username'], email_config['password'])
             
             message = MIMEMultipart()
-            message["Subject"] = f"Urgent: Employee Evaluation Required - {employee_name}"
+            subject = f"Urgent: Employee Evaluation Required - {employee_name}"
+            message["Subject"] = subject
             message["From"] = email_config['sender_email']
             message["To"] = leader_email
             
@@ -470,39 +552,52 @@ def send_reminder_email(employee_name, leader_name, leader_email, evaluation_lin
 <html>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
     <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #2c5aa0; border-bottom: 2px solid #2c5aa0; padding-bottom: 10px;">
+        <h2 style="color: #2c5aa0; border-bottom: 2px solid #2c5aa0; 
+                   padding-bottom: 10px;">
             Employee Evaluation Required
         </h2>
         
         <p>Dear <strong>{leader_name}</strong>,</p>
         
-        <p>This is an urgent reminder that <strong>{employee_name}'s</strong> evaluation period is approaching and requires your immediate attention.</p>
+        <p>This is an urgent reminder that <strong>{employee_name}'s</strong> 
+           evaluation period is approaching and requires your immediate attention.</p>
         
-        <div style="background-color: #f8f9fa; padding: 15px; border-left: 4px solid #2c5aa0; margin: 20px 0;">
+        <div style="background-color: #f8f9fa; padding: 15px; 
+                    border-left: 4px solid #2c5aa0; margin: 20px 0;">
             <h3 style="margin-top: 0; color: #2c5aa0;">Employee Details:</h3>
             <ul style="margin: 10px 0;">
                 <li><strong>Name:</strong> {employee_name}</li>
                 <li><strong>CRM Account:</strong> {crm_account}</li>
                 <li><strong>Evaluation Type:</strong> {evaluation_type}</li>
-                <li><strong>Days Remaining:</strong> <span style="color: #dc3545; font-weight: bold;">{days_remaining} days</span></li>
+                <li><strong>Days Remaining:</strong> 
+                    <span style="color: #dc3545; font-weight: bold;">
+                        {days_remaining} days
+                    </span>
+                </li>
             </ul>
         </div>
         
         <div style="text-align: center; margin: 30px 0;">
             <a href="{evaluation_link}" 
-               style="background-color: #2c5aa0; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; font-size: 16px;"
+               style="background-color: #2c5aa0; color: white; 
+                      padding: 15px 30px; text-decoration: none; 
+                      border-radius: 5px; font-weight: bold; 
+                      display: inline-block; font-size: 16px;"
                target="_blank">
                 📋 Complete Evaluation Form
             </a>
         </div>
         
-        <p style="background-color: #fff3cd; padding: 10px; border: 1px solid #ffeaa7; border-radius: 4px;">
-            <strong>⚠️ Important:</strong> Please complete this evaluation before the deadline to ensure proper HR compliance.
+        <p style="background-color: #fff3cd; padding: 10px; 
+                  border: 1px solid #ffeaa7; border-radius: 4px;">
+            <strong>⚠️ Important:</strong> Please complete this evaluation 
+            before the deadline to ensure proper HR compliance.
         </p>
         
         <p>Thank you for your prompt attention to this matter.</p>
         
-        <div style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 15px; color: #666;">
+        <div style="margin-top: 30px; border-top: 1px solid #eee; 
+                    padding-top: 15px; color: #666;">
             <p><strong>Best regards,</strong><br>
             HR Team<br>
             51Talk</p>
@@ -522,7 +617,7 @@ def send_reminder_email(employee_name, leader_name, leader_email, evaluation_lin
         return False
 
 def get_department_cc_emails(employees_data):
-    """Get CC emails based on department mapping"""
+    """Get CC emails based on department mapping."""
     # Department-based CC mapping
     department_cc_mapping = {
         'CC': ['wuchuan@51talk.com'],
@@ -545,10 +640,17 @@ def get_department_cc_emails(employees_data):
     
     return list(cc_emails)
 
-def send_grouped_reminder_email(leader_name, leader_email, employees_data, evaluation_type, additional_cc_emails=None):
-    """Send one email to a leader with multiple employees listed"""
+def send_grouped_reminder_email(
+    leader_name,
+    leader_email,
+    employees_data,
+    evaluation_type,
+    additional_cc_emails=None
+):
+    """Send one email to a leader with multiple employees listed."""
     try:
-        print(f"Attempting to send grouped email to {leader_email} for {len(employees_data)} employees")
+        employee_count = len(employees_data)
+        print(f"Attempting to send grouped email to {leader_email} for {employee_count} employees")
         
         # Get random email configuration
         email_config = get_random_email_config()
@@ -558,11 +660,14 @@ def send_grouped_reminder_email(leader_name, leader_email, employees_data, evalu
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE
         
-        with smtplib.SMTP_SSL(os.getenv('SMTP_SERVER'), int(os.getenv('SMTP_PORT', 465)), context=context) as server:
+        smtp_server = os.getenv('SMTP_SERVER')
+        smtp_port = int(os.getenv('SMTP_PORT', 465))
+        
+        with smtplib.SMTP_SSL(smtp_server, smtp_port, context=context) as server:
             server.login(email_config['username'], email_config['password'])
             
             message = MIMEMultipart()
-            message["Subject"] = f"Urgent: Multiple Employee Evaluations Required"
+            message["Subject"] = "Urgent: Multiple Employee Evaluations Required"
             message["From"] = email_config['sender_email']
             message["To"] = leader_email
             
@@ -572,7 +677,11 @@ def send_grouped_reminder_email(leader_name, leader_email, employees_data, evalu
             # Add any additional CC emails if provided
             all_cc_emails = department_cc_emails.copy()
             if additional_cc_emails:
-                additional_list = [email.strip() for email in additional_cc_emails.split(',') if email.strip()]
+                additional_emails = additional_cc_emails.split(',')
+                additional_list = [
+                    email.strip() for email in additional_emails 
+                    if email.strip()
+                ]
                 all_cc_emails.extend(additional_list)
             
             # Remove duplicates and set CC header
@@ -583,17 +692,25 @@ def send_grouped_reminder_email(leader_name, leader_email, employees_data, evalu
             # Determine evaluation link and deadline
             if evaluation_type == "Probation Period Evaluation":
                 evaluation_link = os.getenv('PROBATION_FORM_URL')
-                form_type = "probation evaluation"
-                email_intro = "Kindly find the link for the probation evaluation to be done by your side before"
-                completion_note = "noting that if they pass this evaluation they will be full-time employees"
+                email_intro = (
+                    "Kindly find the link for the probation evaluation "
+                    "to be done by your side before"
+                )
+                completion_note = (
+                    "noting that if they pass this evaluation they will "
+                    "be full-time employees"
+                )
             else:
                 evaluation_link = os.getenv('CONTRACT_RENEWAL_FORM_URL')
-                form_type = "contract renewal evaluation" 
-                email_intro = "Kindly find below the name of your team employees that need to be evaluated in order to renew their contracts for a full year, in order to proceed timely it needs to be done before"
+                email_intro = (
+                    "Kindly find below the name of your team employees that "
+                    "need to be evaluated in order to renew their contracts "
+                    "for a full year, in order to proceed timely it needs "
+                    "to be done before"
+                )
                 completion_note = ""
             
             # Find the earliest deadline
-            earliest_deadline = min(emp['days_remaining'] for emp in employees_data)
             earliest_date = min(emp['deadline_date'] for emp in employees_data)
             
             # Create employee table rows
