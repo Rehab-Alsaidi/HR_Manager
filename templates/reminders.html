@@ -432,7 +432,7 @@
                         <div class="leader-info">
                             <h3>{{ reminder.leader_name }}</h3>
                             <p><i class="fas fa-envelope"></i> {{ reminder.leader_email }}</p>
-                            <p><i class="fas fa-building"></i> Departments: {{ reminder.departments }}</p>
+                            <p><i class="fas fa-building"></i> Department: {{ reminder.department }}</p>
                         </div>
                         <div class="evaluation-badge {% if 'Probation' in reminder.evaluation_type %}evaluation-probation{% else %}evaluation-contract{% endif %}">
                             {{ reminder.evaluation_type }}

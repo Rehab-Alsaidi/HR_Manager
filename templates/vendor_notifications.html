@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Notifications - HR Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1f2937;
+            --primary-light: #374151;
+            --primary-dark: #111827;
+            --secondary: #6b7280;
+            --accent: #4b5563;
+            --success: #065f46;
+            --warning: #92400e;
+            --danger: #991b1b;
+            --info: #155e75;
+            
+            --dark-900: #111827;
+            --dark-800: #1f2937;
+            --dark-700: #374151;
+            --dark-600: #4b5563;
+            --dark-500: #6b7280;
+            --dark-400: #9ca3af;
+            --dark-300: #d1d5db;
+            --dark-200: #e5e7eb;
+            --dark-100: #f3f4f6;
+            
+            --white: #ffffff;
+            --glass: rgba(31, 41, 55, 0.95);
+            --glass-border: rgba(75, 85, 99, 0.2);
+            --backdrop: rgba(17, 24, 39, 0.95);
+            
+            --shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-lg: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-xl: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            
+            --border-radius: 6px;
+            --border-radius-lg: 8px;
+            --border-radius-xl: 10px;
+            --border-radius-2xl: 12px;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: radial-gradient(ellipse at top, rgba(59, 130, 246, 0.05) 0%, var(--dark-900) 50%);
+            color: var(--dark-200);
+            line-height: 1.5;
+            min-height: 100vh;
+            margin: 0;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--dark-800) 0%, var(--dark-700) 100%);
+            padding: 2rem;
+            border-radius: var(--border-radius-2xl);
+            margin-bottom: 2rem;
+            border: 1px solid var(--dark-600);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .header p {
+            color: var(--dark-300);
+            font-size: 1rem;
+        }
+
+        .nav-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--dark-400);
+            text-decoration: none;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+            transition: color 0.2s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--dark-200);
+        }
+
+        .actions {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.875rem 1.75rem;
+            border: 1px solid var(--dark-600);
+            border-radius: var(--border-radius-lg);
+            font-weight: 500;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            background: linear-gradient(135deg, var(--dark-800) 0%, var(--dark-700) 100%);
+            color: var(--dark-200);
+        }
+
+        .btn:hover {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            border-color: #3b82f6;
+            color: var(--white);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            border-color: #059669;
+            color: var(--white);
+        }
+
+        .btn-success:hover {
+            background: linear-gradient(135deg, #047857 0%, #059669 100%);
+            border-color: #047857;
+        }
+
+        .employee-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .employee-card {
+            background: linear-gradient(135deg, var(--dark-800) 0%, var(--dark-700) 100%);
+            border: 1px solid var(--dark-600);
+            border-radius: var(--border-radius-xl);
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .employee-card:hover {
+            border-color: var(--dark-500);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .employee-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .employee-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--white);
+            margin-bottom: 0.25rem;
+        }
+
+        .employee-crm {
+            font-size: 0.875rem;
+            color: var(--dark-400);
+            font-family: monospace;
+        }
+
+        .status-badge {
+            padding: 0.375rem 0.75rem;
+            border-radius: var(--border-radius);
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid #ef4444;
+        }
+
+        .employee-details {
+            margin-bottom: 1rem;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .detail-label {
+            font-weight: 500;
+            color: var(--dark-300);
+        }
+
+        .detail-value {
+            color: var(--dark-400);
+            text-align: right;
+            max-width: 60%;
+        }
+
+        .vendor-info {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: var(--border-radius);
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .vendor-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--white);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .vendor-email {
+            font-size: 0.875rem;
+            color: #8b5cf6;
+            font-family: monospace;
+        }
+
+        .no-action {
+            color: var(--dark-400);
+            font-style: italic;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 4rem;
+            color: var(--dark-500);
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--dark-600);
+            border-radius: 50%;
+            border-top-color: var(--dark-400);
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            z-index: 1000;
+            max-width: 400px;
+        }
+
+        .toast {
+            background: linear-gradient(135deg, var(--dark-800) 0%, var(--dark-700) 100%);
+            border: 1px solid var(--dark-600);
+            border-radius: var(--border-radius-lg);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: var(--shadow-xl);
+            transform: translateX(100%);
+            transition: all 0.4s ease;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast-success {
+            border-left: 4px solid #10b981;
+        }
+
+        .toast-error {
+            border-left: 4px solid #ef4444;
+        }
+
+        .toast-title {
+            font-weight: 600;
+            color: var(--white);
+            margin-bottom: 0.5rem;
+        }
+
+        .toast-message {
+            color: var(--dark-300);
+            font-size: 0.875rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--dark-500);
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        .empty-state h3 {
+            font-size: 1.5rem;
+            color: var(--dark-400);
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state p {
+            font-size: 1rem;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="nav-link">
+            <i class="fas fa-arrow-left"></i>
+            Back to Dashboard
+        </a>
+
+        <div class="header">
+            <h1>
+                <i class="fas fa-building"></i>
+                Vendor Notifications
+            </h1>
+            <p>Recently separated employees requiring vendor notification</p>
+        </div>
+
+        <div class="actions">
+            <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                <label style="color: var(--dark-300); font-weight: 500;">Filter by date:</label>
+                <select id="dateFilter" onchange="applyDateFilter()" style="padding: 0.5rem; border: 1px solid var(--dark-600); border-radius: var(--border-radius); background: var(--dark-800); color: var(--dark-200); font-size: 0.875rem;">
+                    <option value="all">All dates</option>
+                    <option value="today">Today</option>
+                    <option value="yesterday">Yesterday</option>
+                    <option value="last7days">Last 7 days</option>
+                    <option value="last30days">Last 30 days</option>
+                    <option value="october2024">October 2024</option>
+                    <option value="custom">Custom date...</option>
+                </select>
+                <input type="date" id="customDate" style="padding: 0.5rem; border: 1px solid var(--dark-600); border-radius: var(--border-radius); background: var(--dark-800); color: var(--dark-200); font-size: 0.875rem; display: none;">
+            </div>
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
+                <button class="btn" onclick="refreshData()">
+                    <i class="fas fa-sync-alt"></i>
+                    Refresh Data
+                </button>
+                <button class="btn btn-success" onclick="sendAllNotifications()" id="sendAllBtn" style="display: none;">
+                    <i class="fas fa-paper-plane"></i>
+                    Send All Notifications
+                </button>
+                <button class="btn" onclick="previewEmailFormat()">
+                    <i class="fas fa-eye"></i>
+                    Preview Email Format
+                </button>
+            </div>
+        </div>
+
+        <div id="employeeContainer">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Loading separated employees...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        function showToast(title, message, type = 'success') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            
+            toast.innerHTML = `
+                <div class="toast-title">${title}</div>
+                <div class="toast-message">${message}</div>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 100);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 400);
+            }, 5000);
+        }
+
+        let allEmployees = []; // Store all employees for filtering
+
+        function loadSeparatedEmployees() {
+            const container = document.getElementById('employeeContainer');
+            container.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading separated employees...</p>
+                </div>
+            `;
+
+            const dateFilter = document.getElementById('dateFilter').value;
+            const customDate = document.getElementById('customDate').value;
+            
+            let url = '/api/check-separated-employees';
+            if (dateFilter !== 'all') {
+                url += `?filter=${dateFilter}`;
+                if (dateFilter === 'custom' && customDate) {
+                    url += `&date=${customDate}`;
+                }
+            }
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        allEmployees = data.separated_employees;
+                        displayEmployees(allEmployees);
+                    } else {
+                        container.innerHTML = `
+                            <div class="empty-state">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <h3>Error Loading Data</h3>
+                                <p>${data.error}</p>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-wifi"></i>
+                            <h3>Connection Error</h3>
+                            <p>Failed to load separated employees</p>
+                        </div>
+                    `;
+                });
+        }
+
+        function applyDateFilter() {
+            const filter = document.getElementById('dateFilter').value;
+            const customDateInput = document.getElementById('customDate');
+            
+            if (filter === 'custom') {
+                customDateInput.style.display = 'block';
+            } else {
+                customDateInput.style.display = 'none';
+            }
+            
+            loadSeparatedEmployees();
+        }
+
+        function displayEmployees(employees) {
+            const container = document.getElementById('employeeContainer');
+            const sendAllBtn = document.getElementById('sendAllBtn');
+
+            if (!employees || employees.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-check-circle"></i>
+                        <h3>No Recent Separations</h3>
+                        <p>No employees separated today requiring vendor notification</p>
+                    </div>
+                `;
+                sendAllBtn.style.display = 'none';
+                return;
+            }
+
+            sendAllBtn.style.display = 'flex';
+            
+            const grid = document.createElement('div');
+            grid.className = 'employee-grid';
+
+            employees.forEach(employee => {
+                const card = document.createElement('div');
+                card.className = 'employee-card';
+                
+                const actionNeeded = employee.vendor_email && employee.vendor_email !== 'No action needed';
+                
+                card.innerHTML = `
+                    <div class="employee-header">
+                        <div>
+                            <div class="employee-name">${employee.name}</div>
+                            <div class="employee-crm">CRM: ${employee.crm}</div>
+                        </div>
+                        <div class="status-badge">
+                            <i class="fas fa-user-times"></i>
+                            Separated
+                        </div>
+                    </div>
+
+                    <div class="employee-details">
+                        <div class="detail-row">
+                            <span class="detail-label">Department:</span>
+                            <span class="detail-value">${employee.department}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Position:</span>
+                            <span class="detail-value">${employee.position}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Contract Company:</span>
+                            <span class="detail-value">${employee.contract_company}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Exit Date:</span>
+                            <span class="detail-value">${employee.exit_date}</span>
+                        </div>
+                    </div>
+
+                    <div class="vendor-info">
+                        <div class="vendor-title">
+                            <i class="fas fa-building"></i>
+                            Vendor: ${employee.vendor_name}
+                        </div>
+                        ${actionNeeded ? 
+                            `<div class="vendor-email">${employee.vendor_email}</div>` : 
+                            `<div class="no-action">No action needed</div>`
+                        }
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+
+            container.innerHTML = '';
+            container.appendChild(grid);
+        }
+
+        function refreshData() {
+            loadSeparatedEmployees();
+        }
+
+        function sendAllNotifications() {
+            const btn = document.getElementById('sendAllBtn');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<div class="spinner" style="width: 16px; height: 16px; border-width: 2px; margin: 0; margin-right: 0.5rem;"></div>Sending...';
+            btn.disabled = true;
+
+            fetch('/api/send-vendor-notifications', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                    
+                    if (data.success) {
+                        const count = data.notifications_sent || 0;
+                        showToast('Notifications Sent', `${count} vendor notification(s) sent successfully`, 'success');
+                        if (count > 0) {
+                            loadSeparatedEmployees(); // Refresh the list
+                        }
+                    } else {
+                        showToast('Error', 'Failed to send notifications: ' + data.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                    showToast('Network Error', error.message, 'error');
+                });
+        }
+
+        function previewEmailFormat() {
+            // Show the professional email format with comma-separated names for October employees
+            const sampleOctoberEmployees = [
+                {
+                    name: "Bilal Abd-alghani tharawi",
+                    exit_date: "2024-10-08"
+                },
+                {
+                    name: "Ibrahim Ghizzawi", 
+                    exit_date: "2024-10-13"
+                },
+                {
+                    name: "Sara Ahmed",
+                    exit_date: "2024-10-22"
+                }
+            ];
+
+            // Filter for October employees and create comma-separated list
+            const octoberEmployeeNames = sampleOctoberEmployees
+                .filter(emp => emp.exit_date.includes('2024-10'))
+                .map(emp => emp.name)
+                .join(', ');
+
+            const emailContent = `
+                <div style="font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f8f9fa;">
+                    <div style="max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                        <div style="text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #007bff;">
+                            <div style="color: #007bff; font-size: 24px; font-weight: bold; margin-bottom: 10px;">Employee Separation Notification</div>
+                            <div style="color: #333; font-size: 18px; margin-bottom: 20px;">شركة ضمة للاستشارات ذات مسؤولية محدودة</div>
+                        </div>
+                        
+                        <p>Dear شركة ضمة للاستشارات ذات مسؤولية محدودة,</p>
+                        
+                        <p>We would like to inform you that the following ${sampleOctoberEmployees.length} employee(s) separated in October:</p>
+                        
+                        <p style="font-weight: bold; margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-left: 4px solid #007bff;">
+                            ${octoberEmployeeNames}
+                        </p>
+                        
+                        <p>Please update your records accordingly and ensure any pending transactions or access permissions are reviewed and updated.</p>
+                        
+                        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 14px;">
+                            <p><strong>Best regards,</strong></p>
+                            <p>HR Department<br>
+                            51Talk Online Education<br>
+                            Date: ${new Date().toISOString().split('T')[0]}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const newWindow = window.open('', '_blank', 'width=800,height=600');
+            newWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Email Format Preview</title>
+                    <meta charset="utf-8">
+                </head>
+                <body style="margin: 20px; background: #f5f5f5;">
+                    <h2 style="text-align: center; color: #333; margin-bottom: 20px;">Vendor Notification Email Format</h2>
+                    ${emailContent}
+                </body>
+                </html>
+            `);
+            newWindow.document.close();
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSeparatedEmployees();
+        });
+    </script>
+</body>
+</html>

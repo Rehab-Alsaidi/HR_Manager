@@ -59,6 +59,7 @@
             margin: 0;
             position: relative;
             overflow-x: hidden;
+            display: flex;
         }
         
         #particles-js {
@@ -113,6 +114,90 @@
             0%, 100% { transform: translateY(0) rotate(0deg); }
             33% { transform: translateY(-30px) rotate(120deg); }
             66% { transform: translateY(30px) rotate(240deg); }
+        }
+
+        .sidebar {
+            width: 250px;
+            min-width: 250px;
+            background: var(--dark-800);
+            border-right: 1px solid var(--dark-600);
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--dark-600);
+        }
+
+        .sidebar-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--white);
+            margin: 0;
+        }
+
+        .sidebar-nav {
+            padding: 1rem;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+            background: var(--dark-700);
+            border: 1px solid var(--dark-600);
+            border-radius: var(--border-radius);
+            color: var(--dark-200);
+            text-decoration: none;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .nav-item:hover {
+            background: var(--dark-600);
+            color: var(--white);
+            transform: translateX(2px);
+        }
+
+        .nav-item i {
+            width: 20px;
+            margin-right: 0.5rem;
+        }
+
+        .nav-count {
+            float: right;
+            background: #3b82f6;
+            color: white;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+
+        .nav-names {
+            font-size: 0.75rem;
+            color: var(--dark-400);
+            margin-top: 0.25rem;
+            line-height: 1.2;
+            max-height: 100px;
+            overflow-y: auto;
+            word-wrap: break-word;
+        }
+
+        .nav-names:empty::after {
+            content: "None";
+            color: var(--dark-500);
+            font-style: italic;
+        }
+
+        .main-content {
+            flex: 1;
+            overflow-x: hidden;
         }
 
         .container {
@@ -713,8 +798,32 @@
     </style>
 </head>
 <body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-title">HR Dashboard</div>
+        </div>
 
-    <div class="container">
+        <div class="sidebar-nav">
+            <a href="/reminders" class="nav-item">
+                <i class="fas fa-bell"></i>
+                Today's Reminders
+                <div id="reminderNames" class="nav-names"></div>
+            </a>
+
+            <!-- Vendor Notifications - Hidden for now
+            <a href="/vendor-notifications" class="nav-item">
+                <i class="fas fa-building"></i>
+                Vendor Notifications
+                <div id="vendorNames" class="nav-names"></div>
+            </a>
+            -->
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container">
         <div class="header">
             <div class="header-content">
                 <h1>HR Evaluation Dashboard</h1>
@@ -1389,8 +1498,44 @@
             }
         }
 
+        // Sidebar functionality
+        function loadSidebarCounts() {
+            // Load reminder names
+            fetch('/api/today-reminders')
+                .then(response => response.json())
+                .then(data => {
+                    const reminderNames = document.getElementById('reminderNames');
+                    if (data.success && data.reminders.length > 0) {
+                        const names = data.reminders.map(reminder => reminder.employee_name).join(', ');
+                        reminderNames.textContent = names;
+                    } else {
+                        reminderNames.textContent = '';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('reminderNames').textContent = 'Error loading';
+                });
+
+            // Load vendor notification names (today's separated employees)
+            fetch('/api/check-separated-employees?filter=today')
+                .then(response => response.json())
+                .then(data => {
+                    const vendorNames = document.getElementById('vendorNames');
+                    if (data.success && data.separated_employees.length > 0) {
+                        const names = data.separated_employees.map(emp => emp.name).join(', ');
+                        vendorNames.textContent = names;
+                    } else {
+                        vendorNames.textContent = '';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('vendorNames').textContent = 'Error loading';
+                });
+        }
+
         // Initialize with enhanced animations
         document.addEventListener('DOMContentLoaded', function() {
+            loadSidebarCounts();
             updateDateHighlights();
             initializeParticles();
             initializeTodayEmailCounter();
@@ -1484,6 +1629,8 @@
             </div>
         </div>
     </div>
+    </div>
+
 
 </body>
 </html>

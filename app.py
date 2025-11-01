@@ -353,11 +353,15 @@ class LarkClient:
         # Convert Base record format to our expected format
         extracted_data = []
         
-        # Add header row (including remaining days fields)
+        # Add header row matching field_mappings order - KEEP COMPATIBILITY
         header_row = [
-            "Employee Name", "Leader Name", "Contract Renewal Date", 
-            "Probation Period End Date", "Employee Status", "Position", "Leader Email",
-            "Leader CRM", "Department", "Employee CRM", "Probation Remaining Days", "Contract Remaining Days"
+            "Employee Name", "Leader Name", "Contract Renewal Date", "Probation Period End Date", 
+            "Employee Status", "Position", "Leader Email", "Leader CRM", "Department", "Employee CRM", 
+            "Probation Remaining Days", "Contract Remaining Days", "Contract Company", "PSID", 
+            "Big Team", "Small Team", "Marital Status", "Religion", "Joining Date", "2nd Contract Renewal",
+            "Gender", "Nationality", "Birthday", "Age", "University", "Educational Level", 
+            "School Ranking", "Major", "Exit Date", "Exit Type", "Exit Reason", "Work Email address", 
+            "contract type", "service year", "Work Site"
         ]
         extracted_data.append(header_row)
         
@@ -443,20 +447,44 @@ class LarkClient:
                         return ""
                     
                     # Map actual Base column structure to expected output format
+                    # Keep original structure for reminders compatibility 
                     field_mappings = [
-                        ('Employee Name', ['Employee Name']),
-                        ('Leader Name', ['Direct Leader CRM']),  # Using Leader CRM as leader name for now
-                        ('Contract Renewal Date', ['1st Contract Renewal Date', 'Limited Contract End date']),  # Try both fields
-                        ('Probation Period End Date', ['Probation Period End Date']),
-                        ('Employee Status', ['Employee Status']),
-                        ('Position', ['Position']),
-                        ('Leader Email', ['Direct Leader Email']),
-                        ('Leader CRM', ['Direct Leader CRM']),
-                        ('Department', ['Department']),
-                        ('Employee CRM', ['CRM']),
-                        # Add the remaining days fields
-                        ('Probation Remaining Days', ['Probation Period Remaining Days']),
-                        ('Contract Remaining Days', ['Remaining Limited Contract End Days'])
+                        ('Employee Name', ['Employee Name']),  # Position 0 - KEEP for reminders
+                        ('Leader Name', ['Direct Leader CRM']),  # Position 1
+                        ('Contract Renewal Date', ['1st Contract Renewal Date', 'Limited Contract End date']),  # Position 2
+                        ('Probation Period End Date', ['Probation Period End Date']),  # Position 3
+                        ('Employee Status', ['Employee Status']),  # Position 4
+                        ('Position', ['Position']),  # Position 5
+                        ('Leader Email', ['Direct Leader Email']),  # Position 6
+                        ('Leader CRM', ['Direct Leader CRM']),  # Position 7
+                        ('Department', ['Department']),  # Position 8
+                        ('Employee CRM', ['CRM']),  # Position 9
+                        ('Probation Remaining Days', ['Probation Period Remaining Days']),  # Position 10 - KEEP for reminders
+                        ('Contract Remaining Days', ['Remaining Limited Contract End Days']),  # Position 11 - KEEP for reminders
+                        # Add new fields for vendor notifications
+                        ('Contract Company', ['Specific company name for signing the employment contract']),  # Position 12
+                        ('PSID', ['PSID']),  # Position 13
+                        ('Big Team', ['Big Team']),  # Position 14
+                        ('Small Team', ['Small Team']),  # Position 15
+                        ('Marital Status', ['Marital Status']),  # Position 16
+                        ('Religion', ['Religion']),  # Position 17
+                        ('Joining Date', ['Joining Date']),  # Position 18
+                        ('2nd Contract Renewal', ['2nd Contract Renewal']),  # Position 19
+                        ('Gender', ['Gender']),  # Position 20
+                        ('Nationality', ['Nationality']),  # Position 21
+                        ('Birthday', ['Birthday']),  # Position 22
+                        ('Age', ['Age']),  # Position 23
+                        ('University', ['University']),  # Position 24
+                        ('Educational Level', ['Educational Level']),  # Position 25
+                        ('School Ranking', ['School Ranking']),  # Position 26
+                        ('Major', ['Major']),  # Position 27
+                        ('Exit Date', ['Exit Date']),  # Position 28
+                        ('Exit Type', ['Exit Type']),  # Position 29
+                        ('Exit Reason', ['Exit Reason']),  # Position 30
+                        ('Work Email address', ['Work Email address']),  # Position 31
+                        ('contract type', ['contract type']),  # Position 32
+                        ('service year', ['service year']),  # Position 33
+                        ('Work Site', ['Work Site'])  # Position 34
                     ]
                     
                     extracted_row = []
@@ -885,8 +913,8 @@ def check_and_send_reminders(employees_data, additional_cc_emails=None):
         if probation_remaining_days is not None:
             try:
                 days_remaining = int(float(str(probation_remaining_days)))
-                # Check for 19-23 days remaining
-                if 19 <= days_remaining <= 23:
+                # Check for 1-20 days remaining
+                if 1 <= days_remaining <= 20:
                     chosen_evaluation = "Probation Period Evaluation"
                     chosen_days = days_remaining
                     # Calculate the date
@@ -894,12 +922,12 @@ def check_and_send_reminders(employees_data, additional_cc_emails=None):
             except:
                 pass
         
-        # Check contract remaining days (direct from Base)  
+        # Check contract remaining days (direct from Base)
         if contract_remaining_days is not None:
             try:
                 days_remaining = int(float(str(contract_remaining_days)))
-                # Check for 19-23 days remaining
-                if 19 <= days_remaining <= 23:
+                # Check for 1-20 days remaining
+                if 1 <= days_remaining <= 20:
                     # If probation is also 20 days, probation takes priority
                     if chosen_evaluation is None or chosen_evaluation != "Probation Period Evaluation":
                         chosen_evaluation = "Contract Renewal Evaluation"
@@ -909,7 +937,7 @@ def check_and_send_reminders(employees_data, additional_cc_emails=None):
             except:
                 pass
         
-        # Only proceed if we have a valid evaluation EXACTLY at 20 days AND employee hasn't been processed yet
+        # Only proceed if we have a valid evaluation (1-20 days) AND employee hasn't been processed yet
         if chosen_evaluation and employee_leader_key not in processed_employees:
             # Check if we have a valid email for sending
             if not is_valid_email_for_sending(leader_email):
@@ -923,17 +951,18 @@ def check_and_send_reminders(employees_data, additional_cc_emails=None):
                 print(f"SKIPPING {employee_name} - Email already sent today for {chosen_evaluation}")
                 continue
                 
-            print(f"Processing employee: {employee_name} | Days remaining: {chosen_days} (20 days) | Type: {chosen_evaluation}")
+            print(f"Processing employee: {employee_name} | Days remaining: {chosen_days} | Department: {department} | Type: {chosen_evaluation}")
             processed_employees.add(employee_leader_key)
-            
-            # Group by leader email + evaluation type
-            group_key = f"{leader_email}|{chosen_evaluation}"
-            
+
+            # Group by leader email + evaluation type + department (to keep departments separate)
+            group_key = f"{leader_email}|{chosen_evaluation}|{department}"
+
             if group_key not in leader_groups:
                 leader_groups[group_key] = {
                     'leader_name': leader_name or "Manager",
                     'leader_email': leader_email,
                     'evaluation_type': chosen_evaluation,
+                    'department': department,
                     'employees': [],
                     'row_indices': [],
                     'employee_names': set()  # Track employee names in this group
@@ -952,8 +981,8 @@ def check_and_send_reminders(employees_data, additional_cc_emails=None):
                     'leader_crm': leader_crm
                 })
                 leader_groups[group_key]['row_indices'].append(row_index)
-    
-    # Send one email per group (leader + evaluation type)
+
+    # Send one email per group (leader + evaluation type + department)
     for group_key, group_data in leader_groups.items():
         email_sent = send_grouped_reminder_email(
             group_data['leader_name'],
@@ -1008,6 +1037,11 @@ def initialize_app():
 initialize_app()
 
 
+@app.route('/vendor-notifications')
+def vendor_notifications():
+    """Vendor notifications page"""
+    return render_template('vendor_notifications.html')
+
 @app.route('/reminders')
 def todays_reminders():
     try:
@@ -1057,21 +1091,21 @@ def todays_reminders():
             if probation_remaining_days is not None:
                 try:
                     days_remaining = int(float(str(probation_remaining_days)))
-                    # Check for 19-23 days remaining
-                    if 19 <= days_remaining <= 23:
+                    # Check for 1-20 days remaining
+                    if 1 <= days_remaining <= 20:
                         chosen_evaluation = "Probation Period Evaluation"
                         chosen_days = days_remaining
                         # Calculate the date
                         chosen_date = today + timedelta(days=days_remaining)
                 except:
                     pass
-            
-            # Check contract remaining days (direct from Base)  
+
+            # Check contract remaining days (direct from Base)
             if contract_remaining_days is not None:
                 try:
                     days_remaining = int(float(str(contract_remaining_days)))
-                    # Check for 19-23 days remaining
-                    if 19 <= days_remaining <= 23:
+                    # Check for 1-20 days remaining
+                    if 1 <= days_remaining <= 20:
                         # If probation is also in range, probation takes priority
                         if chosen_evaluation is None or chosen_evaluation != "Probation Period Evaluation":
                             chosen_evaluation = "Contract Renewal Evaluation"
@@ -1080,11 +1114,11 @@ def todays_reminders():
                             chosen_date = today + timedelta(days=days_remaining)
                 except:
                     pass
-            
+
             # Also check for employees with "Email Sent" status (recently processed)
             email_sent_recently = (employee_status == "Email Sent")
-            
-            # Include if: 1) Valid evaluation in 19-25 days, OR 2) Email was sent recently (today)
+
+            # Include if: 1) Valid evaluation in 1-20 days, OR 2) Email was sent recently (today)
             should_include = (chosen_evaluation and employee_leader_key not in processed_employees) or email_sent_recently
             
             if should_include:
@@ -1117,21 +1151,21 @@ def todays_reminders():
                         except:
                             pass
                 
-                group_key = f"{leader_email}|{chosen_evaluation}"
-                
+                # Group by leader email + evaluation type + department (to keep departments separate)
+                group_key = f"{leader_email}|{chosen_evaluation}|{department}"
+
                 if group_key not in leader_groups:
                     leader_groups[group_key] = {
                         'leader_name': leader_name or "Manager",
                         'leader_email': leader_email,
                         'evaluation_type': chosen_evaluation,
+                        'department': department,
                         'employees': [],
-                        'employee_names': set(),
-                        'departments': set()
+                        'employee_names': set()
                     }
-                
+
                 if employee_name not in leader_groups[group_key]['employee_names']:
                     leader_groups[group_key]['employee_names'].add(employee_name)
-                    leader_groups[group_key]['departments'].add(department.strip().upper() if department else 'Unknown')
                     leader_groups[group_key]['employees'].append({
                         'name': employee_name,
                         'department': department,
@@ -1148,14 +1182,14 @@ def todays_reminders():
         for group_key, group_data in leader_groups.items():
             # Get department-based CC emails for this group
             department_cc_emails = get_department_cc_emails(group_data['employees'])
-            
+
             reminders_data.append({
                 'leader_name': group_data['leader_name'],
                 'leader_email': group_data['leader_email'],
                 'evaluation_type': group_data['evaluation_type'],
                 'employee_count': len(group_data['employees']),
                 'employees': group_data['employees'],
-                'departments': ', '.join(sorted(group_data['departments'])),
+                'department': group_data['department'],  # Single department now
                 'cc_emails': ', '.join(department_cc_emails)
             })
         
@@ -1329,8 +1363,8 @@ def test_duplicate_prevention():
                         eval_date = datetime.strptime(str(probation_end), "%Y-%m-%d").date()
                     
                     days_until = (eval_date - today).days
-                    
-                    if days_until in [19, 20, 21, 22, 23, 24, 25]:
+
+                    if 1 <= days_until <= 20:
                         evaluation_type = "Probation Period Evaluation"
                         
                         # Check if would be skipped due to duplicate
@@ -1372,15 +1406,15 @@ def preview_reminders():
 # Debug output removed - system working correctly
         today = datetime.now().date()
         
-        # Group employees by leader email and evaluation type (EXACT same logic as check_and_send_reminders)
+        # Group employees by leader email, evaluation type, and department (EXACT same logic as check_and_send_reminders)
         leader_groups = {}
         # Track processed employees to prevent duplicates
         processed_employees = set()
-        
+
         for row_index, employee in enumerate(data[1:], start=1):
             if len(employee) < 12:  # Need 12 columns for remaining days fields
                 continue
-                
+
             employee_name = employee[0]
             leader_name = employee[1]
             contract_renewal = employee[2]
@@ -1391,91 +1425,82 @@ def preview_reminders():
             leader_crm = employee[7]
             department = employee[8]
             employee_crm = employee[9]
-            
-# Debug output removed - system working correctly
-            
+            probation_remaining_days = employee[10] if len(employee) > 10 else None
+            contract_remaining_days = employee[11] if len(employee) > 11 else None
+
             leader_email = extract_email(leader_email_raw)
-            
+
             if not employee_name or not str(employee_name).strip():
                 continue  # Skip if no employee name
-            
+
             # Skip separated employees - don't include in preview for separated employees
-            if len(employee) > 4 and employee[4] and str(employee[4]).strip().lower() == 'separated':
+            if employee_status and str(employee_status).strip().lower() == 'separated':
                 continue  # Skip separated employees
-            
+
             # Create unique key for this employee under this leader to prevent duplicates
             employee_leader_key = f"{employee_name.strip()}|{leader_email}"
-            
+
             # Determine which evaluation is more urgent and closer to deadline
             chosen_evaluation = None
             chosen_date = None
             chosen_days = None
-            
-            # Check probation end date
-            if probation_end:
+
+            # Check probation remaining days (direct from Base)
+            if probation_remaining_days is not None:
                 try:
-                    if isinstance(probation_end, (int, float)):
-                        eval_date = excel_date_to_python(probation_end).date()
-                    else:
-                        eval_date = datetime.strptime(str(probation_end), "%Y-%m-%d").date()
-                    
-                    days_until = (eval_date - today).days
-                    
-                    # STRICT: Only EXACTLY 20 days
-                    if days_until == 20:
-                        if chosen_evaluation is None or days_until < chosen_days:
-                            chosen_evaluation = "Probation Period Evaluation"
-                            chosen_date = eval_date
-                            chosen_days = days_until
+                    days_remaining = int(float(str(probation_remaining_days)))
+                    # Check for 1-20 days remaining
+                    if 1 <= days_remaining <= 20:
+                        chosen_evaluation = "Probation Period Evaluation"
+                        chosen_days = days_remaining
+                        # Calculate the date
+                        chosen_date = today + timedelta(days=days_remaining)
                 except:
                     pass
-            
-            # Check contract renewal date  
-            if contract_renewal:
+
+            # Check contract remaining days (direct from Base)
+            if contract_remaining_days is not None:
                 try:
-                    if isinstance(contract_renewal, (int, float)):
-                        eval_date = excel_date_to_python(contract_renewal).date()
-                    else:
-                        eval_date = datetime.strptime(str(contract_renewal), "%Y-%m-%d").date()
-                    
-                    days_until = (eval_date - today).days
-                    
-                    # STRICT: Only EXACTLY 20 days
-                    if days_until == 20:
-                        if chosen_evaluation is None or days_until < chosen_days:
+                    days_remaining = int(float(str(contract_remaining_days)))
+                    # Check for 1-20 days remaining
+                    if 1 <= days_remaining <= 20:
+                        # If probation is also in range, probation takes priority
+                        if chosen_evaluation is None or chosen_evaluation != "Probation Period Evaluation":
                             chosen_evaluation = "Contract Renewal Evaluation"
-                            chosen_date = eval_date
-                            chosen_days = days_until
+                            chosen_days = days_remaining
+                            # Calculate the date
+                            chosen_date = today + timedelta(days=days_remaining)
                 except:
                     pass
-            
-            # Only proceed if we have a valid evaluation EXACTLY at 20 days AND employee hasn't been processed yet
+
+            # Only proceed if we have a valid evaluation (1-20 days) AND employee hasn't been processed yet
             if chosen_evaluation and employee_leader_key not in processed_employees:
                 # Check if we have a valid email for sending
                 if not is_valid_email_for_sending(leader_email):
                     print(f"PREVIEW SKIP: {employee_name} has invalid leader email '{leader_email}'")
                     continue
-                
+
                 # CRITICAL: Check if email was already sent today to prevent duplicates in preview
                 if is_email_already_sent_today(employee_name, leader_email, chosen_evaluation):
                     print(f"PREVIEW SKIP: {employee_name} - Email already sent today for {chosen_evaluation}")
                     continue
-                    
-                print(f"Preview: {employee_name} | Days remaining: {chosen_days} (20 days) | Type: {chosen_evaluation}")
+
+                print(f"Preview: {employee_name} | Days remaining: {chosen_days} | Department: {department} | Type: {chosen_evaluation}")
                 processed_employees.add(employee_leader_key)
-                
-                # Group by leader email + evaluation type
-                group_key = f"{leader_email}|{chosen_evaluation}"
-                
+
+                # Group by leader email + evaluation type + department (to keep departments separate)
+                group_key = f"{leader_email}|{chosen_evaluation}|{department}"
+
                 if group_key not in leader_groups:
                     leader_groups[group_key] = {
                         'leader_name': leader_name or "Manager",
                         'leader_email': leader_email,
                         'evaluation_type': chosen_evaluation,
+                        'department': department,
                         'employees': [],
                         'employee_names': set()  # Track employee names in this group
                     }
-                
+
                 # Double-check for duplicates within the same group
                 if employee_name not in leader_groups[group_key]['employee_names']:
                     leader_groups[group_key]['employee_names'].add(employee_name)
@@ -1492,6 +1517,7 @@ def preview_reminders():
                 'leader_name': group_data['leader_name'],
                 'leader_email': group_data['leader_email'],
                 'evaluation_type': group_data['evaluation_type'],
+                'department': group_data['department'],
                 'employee_count': len(group_data['employees']),
                 'employees': group_data['employees']
             })
@@ -1861,7 +1887,7 @@ def debug_railway_complete():
             if prob_days:
                 try:
                     days = int(float(str(prob_days)))
-                    if 19 <= days <= 23:
+                    if 1 <= days <= 20:
                         employees_in_range += 1
                         if len(sample_found) < 3:
                             sample_found.append({
@@ -1872,26 +1898,26 @@ def debug_railway_complete():
                             })
                 except:
                     pass
-            
+
             if cont_days:
                 try:
                     days = int(float(str(cont_days)))
-                    if 19 <= days <= 23:
+                    if 1 <= days <= 20:
                         employees_in_range += 1
                         if len(sample_found) < 3:
                             sample_found.append({
                                 "name": employee[0],
-                                "type": "Contract", 
+                                "type": "Contract",
                                 "days": days,
                                 "leader_email": employee[6] if len(employee) > 6 else "MISSING"
                             })
                 except:
                     pass
-        
+
         debug_info["step3_evaluation_logic"] = {
             "employees_checked": employees_checked,
             "employees_with_days_data": employees_with_days,
-            "employees_in_range_19_23": employees_in_range,
+            "employees_in_range_1_20": employees_in_range,
             "sample_found": sample_found
         }
         
@@ -1943,31 +1969,31 @@ def debug_evaluation_logic():
             "employees_checked": 0,
             "employees_with_probation_days": 0,
             "employees_with_contract_days": 0,
-            "employees_in_range_19_23": 0,
+            "employees_in_range_1_20": 0,
             "sample_employees": []
         }
-        
+
         # Process like check_and_send_reminders does
         for row_index, employee in enumerate(data[1:], start=1):
             if len(employee) < 12:
                 continue
-                
+
             debug_info["employees_checked"] += 1
-            
+
             employee_name = employee[0]
             probation_remaining_days = employee[10] if len(employee) > 10 else None
             contract_remaining_days = employee[11] if len(employee) > 11 else None
-            
+
             prob_days_int = None
             cont_days_int = None
-            
+
             # Check probation
             if probation_remaining_days is not None and probation_remaining_days != '':
                 debug_info["employees_with_probation_days"] += 1
                 try:
                     prob_days_int = int(float(str(probation_remaining_days)))
-                    if 19 <= prob_days_int <= 23:
-                        debug_info["employees_in_range_19_23"] += 1
+                    if 1 <= prob_days_int <= 20:
+                        debug_info["employees_in_range_1_20"] += 1
                         if len(debug_info["sample_employees"]) < 5:
                             debug_info["sample_employees"].append({
                                 "name": employee_name,
@@ -1976,18 +2002,18 @@ def debug_evaluation_logic():
                             })
                 except:
                     pass
-            
+
             # Check contract
             if contract_remaining_days is not None and contract_remaining_days != '':
                 debug_info["employees_with_contract_days"] += 1
                 try:
                     cont_days_int = int(float(str(contract_remaining_days)))
-                    if 19 <= cont_days_int <= 23:
-                        debug_info["employees_in_range_19_23"] += 1
+                    if 1 <= cont_days_int <= 20:
+                        debug_info["employees_in_range_1_20"] += 1
                         if len(debug_info["sample_employees"]) < 5:
                             debug_info["sample_employees"].append({
                                 "name": employee_name,
-                                "type": "Contract", 
+                                "type": "Contract",
                                 "days": cont_days_int
                             })
                 except:
@@ -2163,8 +2189,8 @@ def all_employees_debug():
                 "contract_renewal_date": employee[2] or "",
                 "probation_days_remaining": probation_days,
                 "contract_days_remaining": contract_days,
-                "needs_probation_eval": probation_days is not None and 19 <= probation_days <= 23,
-                "needs_contract_eval": contract_days is not None and 19 <= contract_days <= 23
+                "needs_probation_eval": probation_days is not None and 1 <= probation_days <= 20,
+                "needs_contract_eval": contract_days is not None and 1 <= contract_days <= 20
             })
         
         return jsonify({
@@ -2178,5 +2204,457 @@ def all_employees_debug():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
 
+# Helper function to convert timestamps to readable dates
+def convert_timestamp_to_date(timestamp):
+    """Convert timestamp to readable date format"""
+    if not timestamp or timestamp == '':
+        return 'Not specified'
+    
+    try:
+        # Convert string timestamp to int
+        timestamp_int = int(float(str(timestamp)))
+        # Convert milliseconds to seconds if needed
+        if timestamp_int > 9999999999:  # More than 10 digits means milliseconds
+            timestamp_int = timestamp_int // 1000
+        
+        date_obj = datetime.fromtimestamp(timestamp_int)
+        return date_obj.strftime('%Y-%m-%d')
+    except:
+        return str(timestamp)
+
+# Vendor notification functionality
+def get_vendor_email(contract_company):
+    """Get vendor email based on contract company name"""
+    if not contract_company:
+        return None, None
+    
+    company_lower = str(contract_company).lower()
+    
+    if 'ضمة للاستشارات' in company_lower or 'dummah' in company_lower:
+        return 'dummah@gmail.com', 'شركة ضمة للاستشارات ذات مسؤولية محدودة'
+    elif 'migrate business services' in company_lower:
+        return 'migrate@gmail.com', 'Migrate Business Services Co.'
+    elif 'helloworld online education jordan llc' in company_lower:
+        return None, 'Helloworld Online Education Jordan LLC'  # No action needed
+    else:
+        return None, f'Unknown Vendor (Company: {contract_company})'
+
+def send_vendor_notification_grouped(employees_data, vendor_email, vendor_name):
+    """Send vendor notification email for multiple separated employees grouped by company"""
+    if not vendor_email:
+        return False, "No email configured for this vendor"
+    
+    try:
+        # Use same email configuration as reminders
+        smtp_accounts = [
+            {
+                'smtp_server': os.getenv('SMTP_SERVER', 'smtp.gmail.com'),
+                'smtp_port': int(os.getenv('SMTP_PORT', 587)),
+                'email': os.getenv('SMTP_EMAIL'),
+                'password': os.getenv('SMTP_PASSWORD')
+            }
+        ]
+        
+        # Select random SMTP account
+        smtp_config = random.choice([acc for acc in smtp_accounts if acc['email'] and acc['password']])
+        
+        # Create email message
+        message = MIMEMultipart("alternative")
+        message["From"] = smtp_config['email']
+        message["To"] = vendor_email
+        message["Subject"] = f"Employee Separation Notification - {len(employees_data)} Employee(s)"
+        
+        # Create professional HTML content with table
+        # Filter for October employees only
+        october_employees = []
+        for emp in employees_data:
+            exit_date = emp.get('exit_date', '')
+            if exit_date and '2024-10' in str(exit_date):
+                october_employees.append(emp)
+
+        # Create table rows with employee names and exit dates
+        table_rows = ""
+        for emp in october_employees:
+            table_rows += f"""
+                <tr>
+                    <td style="padding: 12px; border: 1px solid #ddd;">{emp['name']}</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">{emp.get('exit_date', 'Not specified')}</td>
+                </tr>"""
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f8f9fa; }}
+                .container {{ max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+                .header {{ text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #007bff; }}
+                .title {{ color: #007bff; font-size: 24px; font-weight: bold; margin-bottom: 10px; }}
+                .company-name {{ color: #333; font-size: 18px; margin-bottom: 20px; }}
+                table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+                th {{ background-color: #007bff; color: white; padding: 12px; text-align: left; font-weight: bold; }}
+                td {{ padding: 12px; border: 1px solid #ddd; }}
+                tr:nth-child(even) {{ background-color: #f8f9fa; }}
+                .footer {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 14px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <div class="title">Employee Separation Notification</div>
+                    <div class="company-name">{vendor_name}</div>
+                </div>
+
+                <p>Dear {vendor_name},</p>
+
+                <p>We would like to inform you that the following {len(october_employees)} employee(s) separated in October:</p>
+
+                <table style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #ddd;">
+                    <thead>
+                        <tr style="background-color: #007bff;">
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; color: white;">Employee Name</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; color: white;">Exit Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {table_rows}
+                    </tbody>
+                </table>
+
+                <p>Please update your records accordingly and ensure any pending transactions or access permissions are reviewed and updated.</p>
+
+                <div class="footer">
+                    <p><strong>Best regards,</strong></p>
+                    <p>HR Department<br>
+                    51Talk Online Education<br>
+                    Date: {datetime.now().strftime('%Y-%m-%d')}</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Attach HTML content
+        html_part = MIMEText(html_content, "html")
+        message.attach(html_part)
+        
+        # Send email
+        context = ssl.create_default_context()
+        with smtplib.SMTP(smtp_config['smtp_server'], smtp_config['smtp_port']) as server:
+            server.starttls(context=context)
+            server.login(smtp_config['email'], smtp_config['password'])
+            text = message.as_string()
+            server.sendmail(smtp_config['email'], vendor_email, text)
+        
+        employee_names = ", ".join([emp['name'] for emp in employees_data])
+        print(f"✅ Vendor notification sent to {vendor_name} ({vendor_email}) for {len(employees_data)} employees: {employee_names}")
+        return True, "Email sent successfully"
+        
+    except Exception as e:
+        print(f"❌ Failed to send vendor notification: {str(e)}")
+        return False, str(e)
+
+@app.route('/api/today-reminders')
+def get_today_reminders():
+    """Get today's urgent reminders for sidebar"""
+    try:
+        data = lark_client.get_data()
+        today = datetime.now().date()
+        reminders = []
+        
+        for employee in data[1:]:  # Skip header
+            if len(employee) < 4:  # Need at least positions 0-3
+                continue
+                
+            employee_name = employee[0]  # Position 0: Employee Name
+            if not employee_name or not str(employee_name).strip():
+                continue
+            
+            # Check probation period end date (position 3)
+            probation_end_date = employee[3] if len(employee) > 3 else None
+            if probation_end_date is not None and probation_end_date != '':
+                try:
+                    # Convert timestamp to date and calculate remaining days
+                    probation_date = convert_timestamp_to_date(probation_end_date)
+                    if probation_date:
+                        days_remaining = (probation_date - today).days
+                        if 1 <= days_remaining <= 20:
+                            reminders.append({
+                                'employee_name': employee_name,
+                                'evaluation_type': 'Probation',
+                                'days_remaining': days_remaining
+                            })
+                except:
+                    pass
+
+            # Check contract renewal date (position 2)
+            contract_renewal_date = employee[2] if len(employee) > 2 else None
+            if contract_renewal_date is not None and contract_renewal_date != '':
+                try:
+                    # Convert timestamp to date and calculate remaining days
+                    renewal_date = convert_timestamp_to_date(contract_renewal_date)
+                    if renewal_date:
+                        days_remaining = (renewal_date - today).days
+                        if 1 <= days_remaining <= 20:
+                            reminders.append({
+                                'employee_name': employee_name,
+                                'evaluation_type': 'Contract',
+                                'days_remaining': days_remaining
+                            })
+                except:
+                    pass
+        
+        # Sort by urgency (fewer days first)
+        reminders.sort(key=lambda x: x['days_remaining'])
+        
+        return jsonify({
+            'success': True,
+            'reminders': reminders[:10]  # Limit to 10 most urgent
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/check-separated-employees')
+def check_separated_employees():
+    """Check for employees with 'Separated' status only with optional date filtering"""
+    try:
+        data = lark_client.get_data()
+        separated_employees = []
+        
+        # Get filter parameters
+        date_filter = request.args.get('filter', 'all')
+        custom_date = request.args.get('date', '')
+        
+        # Calculate date ranges for filtering
+        today = datetime.now().date()
+        yesterday = today - timedelta(days=1)
+        last_7_days = today - timedelta(days=7)
+        last_30_days = today - timedelta(days=30)
+        
+        for employee in data[1:]:  # Skip header
+            if len(employee) < 15:  # Reduced minimum requirement
+                continue
+                
+            # Map to NEW column positions after reordering
+            employee_name = employee[0] if len(employee) > 0 else None  # Employee Name - Position 0
+            employee_status = employee[4] if len(employee) > 4 else None  # Employee Status - Position 4  
+            exit_date = employee[28] if len(employee) > 28 else None  # Exit Date - Position 28
+            exit_reason = employee[30] if len(employee) > 30 else None  # Exit Reason - Position 30
+            contract_company = employee[12] if len(employee) > 12 else None  # Contract Company - Position 12
+            crm = employee[9] if len(employee) > 9 else None  # Employee CRM - Position 9
+            department = employee[8] if len(employee) > 8 else None  # Department - Position 8
+            position = employee[5] if len(employee) > 5 else None  # Position - Position 5
+            
+            if not employee_name or not str(employee_name).strip():
+                continue
+            
+            # Check for "Separated" or "Terminated" status (including misspelling "Seperated")
+            if employee_status and str(employee_status).lower().strip() in ['separated', 'seperated', 'terminated']:
+                exit_date_formatted = convert_timestamp_to_date(exit_date)
+                
+                # Apply date filtering
+                if date_filter != 'all' and exit_date_formatted != '-':
+                    try:
+                        exit_date_obj = datetime.strptime(exit_date_formatted, '%Y-%m-%d').date()
+                        
+                        if date_filter == 'today' and exit_date_obj != today:
+                            continue
+                        elif date_filter == 'yesterday' and exit_date_obj != yesterday:
+                            continue
+                        elif date_filter == 'last7days' and exit_date_obj < last_7_days:
+                            continue
+                        elif date_filter == 'last30days' and exit_date_obj < last_30_days:
+                            continue
+                        elif date_filter == 'october2024' and not exit_date_formatted.startswith('2024-10'):
+                            continue
+                        elif date_filter == 'custom' and custom_date:
+                            if exit_date_formatted != custom_date:
+                                continue
+                    except ValueError:
+                        # Skip if date parsing fails
+                        continue
+                
+                # Get vendor email for this contract company
+                vendor_email, vendor_name = get_vendor_email(contract_company)
+                
+                separated_employees.append({
+                    'name': employee_name,
+                    'department': department or 'Not specified',
+                    'crm': crm or 'Not specified',
+                    'exit_reason': exit_reason or 'Not specified',
+                    'exit_date': exit_date_formatted,
+                    'vendor_email': vendor_email,
+                    'vendor_name': vendor_name,
+                    'position': position or 'Not specified',
+                    'contract_company': contract_company or 'Not specified'
+                })
+        
+        return jsonify({
+            'success': True,
+            'separated_employees': separated_employees,
+            'filter_applied': date_filter
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/send-vendor-notifications', methods=['POST'])
+def send_vendor_notifications():
+    """Send vendor notifications for separated employees - grouped by company"""
+    try:
+        # Get separated employees
+        response = check_separated_employees()
+        response_data = response.get_json()
+        
+        if not response_data.get('success'):
+            return jsonify({'success': False, 'error': 'Failed to get separated employees'}), 500
+        
+        separated_employees = response_data.get('separated_employees', [])
+        
+        # Group employees by vendor email and vendor name
+        vendor_groups = {}
+        for employee in separated_employees:
+            vendor_email = employee.get('vendor_email')
+            vendor_name = employee.get('vendor_name')
+            
+            if vendor_email:  # Only process if vendor email is configured
+                key = f"{vendor_email}|{vendor_name}"
+                if key not in vendor_groups:
+                    vendor_groups[key] = {
+                        'vendor_email': vendor_email,
+                        'vendor_name': vendor_name,
+                        'employees': []
+                    }
+                vendor_groups[key]['employees'].append(employee)
+        
+        notifications_sent = 0
+        errors = []
+        
+        # Send one email per vendor group
+        for group_key, group_data in vendor_groups.items():
+            vendor_email = group_data['vendor_email']
+            vendor_name = group_data['vendor_name']
+            employees = group_data['employees']
+            
+            success, message = send_vendor_notification_grouped(employees, vendor_email, vendor_name)
+            if success:
+                notifications_sent += 1
+            else:
+                errors.append(f"Failed to notify {vendor_name}: {message}")
+        
+        if errors:
+            return jsonify({
+                'success': True,
+                'notifications_sent': notifications_sent,
+                'errors': errors,
+                'message': f'Sent {notifications_sent} notifications with {len(errors)} errors'
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'notifications_sent': notifications_sent,
+                'message': f'Successfully sent {notifications_sent} vendor notifications'
+            })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/debug-contract-companies')
+def debug_contract_companies():
+    """Debug endpoint to see contract company values and employee status"""
+    try:
+        data = lark_client.get_data()
+        contract_companies = []
+        
+        for i, employee in enumerate(data[1:], start=1):  # Skip header
+            if len(employee) < 10:  # Reduce minimum requirement
+                continue
+                
+            employee_name = employee[0] if len(employee) > 0 else None  # Employee Name - Position 0
+            contract_company = employee[12] if len(employee) > 12 else None  # Contract Company - Position 12
+            employee_status = employee[4] if len(employee) > 4 else None  # Employee Status - Position 4
+            exit_reason = employee[30] if len(employee) > 30 else None  # Exit Reason - Position 30
+            
+            if employee_name and str(employee_name).strip():
+                vendor_email, vendor_name = get_vendor_email(contract_company)
+                
+                contract_companies.append({
+                    'row': i,
+                    'employee_name': employee_name,
+                    'contract_company': contract_company,
+                    'employee_status': employee_status,
+                    'exit_reason': exit_reason,
+                    'vendor_name': vendor_name,
+                    'vendor_email': vendor_email,
+                    'is_separated': str(employee_status).lower().strip() in ['separated', 'seperated', 'terminated'] if employee_status else False
+                })
+        
+        return jsonify({
+            'success': True,
+            'total_employees': len(contract_companies),
+            'header_row': data[0] if len(data) > 0 else [],
+            'contract_companies': contract_companies[:20]  # Show first 20
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/debug-data-loading')
+def debug_data_loading():
+    """Debug endpoint to check data loading from Base"""
+    try:
+        data = lark_client.get_data()
+        
+        return jsonify({
+            'success': True,
+            'total_rows': len(data),
+            'header_row': data[0] if len(data) > 0 else [],
+            'sample_first_5_rows': data[1:6] if len(data) > 1 else [],
+            'sample_last_5_rows': data[-5:] if len(data) > 5 else [],
+            'row_lengths': [len(row) for row in data[:10]] if len(data) > 0 else []
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/debug-reminder-data')
+def debug_reminder_data():
+    """Debug endpoint specifically for reminder data structure"""
+    try:
+        data = lark_client.get_data()
+        
+        debug_info = {
+            'total_rows': len(data),
+            'header_row': data[0] if len(data) > 0 else [],
+            'sample_employees_with_days': []
+        }
+        
+        # Check first 10 employees for days data
+        for i, employee in enumerate(data[1:11], start=1):
+            if len(employee) < 12:
+                continue
+                
+            employee_info = {
+                'row_index': i,
+                'employee_name': employee[0] if len(employee) > 0 else None,
+                'probation_days_col_10': employee[10] if len(employee) > 10 else None,
+                'contract_days_col_11': employee[11] if len(employee) > 11 else None,
+                'probation_days_col_16': employee[16] if len(employee) > 16 else None,
+                'contract_days_col_18': employee[18] if len(employee) > 18 else None,
+                'row_length': len(employee)
+            }
+            debug_info['sample_employees_with_days'].append(employee_info)
+        
+        return jsonify({
+            'success': True,
+            'debug_info': debug_info
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 if __name__ == '__main__':
-    app.run(debug=True, port=5002)
+    port = int(os.environ.get('PORT', 5002))
+    app.run(host='0.0.0.0', port=port, debug=False)
