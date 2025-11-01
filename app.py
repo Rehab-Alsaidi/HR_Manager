@@ -896,10 +896,10 @@ def check_and_send_reminders(employees_data, additional_cc_emails=None):
         # Always capture employee data, but only process for email sending if we have valid data
         if not employee_name or not str(employee_name).strip():
             continue  # Skip if no employee name
-        
-        # Skip separated employees - don't send emails for them
-        if employee_status and str(employee_status).strip().lower() == 'separated':
-            continue  # Skip separated employees
+
+        # Only process Active employees - skip all others (separated, terminated, etc.)
+        if not employee_status or str(employee_status).strip().lower() != 'active':
+            continue  # Skip non-active employees
         
         # Create unique key for this employee under this leader to prevent duplicates
         employee_leader_key = f"{employee_name.strip()}|{leader_email}"
@@ -1072,10 +1072,10 @@ def todays_reminders():
             
             if not employee_name or not str(employee_name).strip():
                 continue  # Skip if no employee name
-            
-            # Skip separated employees - don't show in reminders view for separated employees
-            if employee_status and str(employee_status).strip().lower() == 'separated':
-                continue  # Skip separated employees
+
+            # Only show Active employees in reminders view - skip all others
+            if not employee_status or str(employee_status).strip().lower() != 'active':
+                continue  # Skip non-active employees
             
             employee_leader_key = f"{employee_name.strip()}|{leader_email}"
             
@@ -1433,9 +1433,9 @@ def preview_reminders():
             if not employee_name or not str(employee_name).strip():
                 continue  # Skip if no employee name
 
-            # Skip separated employees - don't include in preview for separated employees
-            if employee_status and str(employee_status).strip().lower() == 'separated':
-                continue  # Skip separated employees
+            # Only preview Active employees - skip all others (separated, terminated, etc.)
+            if not employee_status or str(employee_status).strip().lower() != 'active':
+                continue  # Skip non-active employees
 
             # Create unique key for this employee under this leader to prevent duplicates
             employee_leader_key = f"{employee_name.strip()}|{leader_email}"
