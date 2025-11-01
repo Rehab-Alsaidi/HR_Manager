@@ -525,21 +525,23 @@ class LarkClient:
 def get_random_email_config():
     """Get a random email configuration from the available sender emails."""
     sender_emails_env = os.getenv('SENDER_EMAILS', os.getenv('SENDER_EMAIL'))
-    sender_emails = sender_emails_env.split(',')
-    
+    sender_emails = [email.strip() for email in sender_emails_env.split(',')]
+
     usernames_env = os.getenv('EMAIL_USERNAMES', os.getenv('EMAIL_USERNAME'))
-    email_usernames = usernames_env.split(',')
-    
+    email_usernames = [username.strip() for username in usernames_env.split(',')]
+
     passwords_env = os.getenv('EMAIL_PASSWORDS', os.getenv('EMAIL_PASSWORD'))
-    email_passwords = passwords_env.split(',')
-    
-    # Choose a random index
-    index = random.randint(0, len(sender_emails) - 1)
-    
+    email_passwords = [password.strip() for password in passwords_env.split(',')]
+
+    # Use first email account to authenticate (usually the most reliable one)
+    # But show all HR emails in the "From" field
+    index = 0  # Use first account (sarakhateeb@51talk.com) for authentication
+
     return {
-        'sender_email': sender_emails[index].strip(),
-        'username': email_usernames[index].strip(),
-        'password': email_passwords[index].strip()
+        'sender_email': ', '.join(sender_emails),  # Show all 3 emails in From field
+        'auth_email': sender_emails[index],  # Email to use for SMTP authentication
+        'username': email_usernames[index],
+        'password': email_passwords[index]
     }
 
 def send_reminder_email(
@@ -554,10 +556,10 @@ def send_reminder_email(
     """Send evaluation reminder email to leader."""
     try:
         print(f"Attempting to send email to {leader_email} for {employee_name}")
-        
-        # Get random email configuration
+
+        # Get email configuration (shows all 3 HR emails in From field)
         email_config = get_random_email_config()
-        print(f"Using sender email: {email_config['sender_email']}")
+        print(f"Using sender emails: {email_config['sender_email']}")
         
         context = ssl.create_default_context()
         context.check_hostname = False
@@ -568,11 +570,11 @@ def send_reminder_email(
         
         with smtplib.SMTP_SSL(smtp_server, smtp_port, context=context) as server:
             server.login(email_config['username'], email_config['password'])
-            
+
             message = MIMEMultipart()
             subject = f"Urgent: Employee Evaluation Required - {employee_name}"
             message["Subject"] = subject
-            message["From"] = email_config['sender_email']
+            message["From"] = email_config['sender_email']  # Shows all 3 HR emails
             message["To"] = leader_email
             
             # Professional email body with HTML formatting for clickable links
@@ -679,10 +681,10 @@ def send_grouped_reminder_email(
     try:
         employee_count = len(employees_data)
         print(f"Attempting to send grouped email to {leader_email} for {employee_count} employees")
-        
-        # Get random email configuration
+
+        # Get email configuration (shows all 3 HR emails in From field)
         email_config = get_random_email_config()
-        print(f"Using sender email: {email_config['sender_email']}")
+        print(f"Using sender emails: {email_config['sender_email']}")
         
         context = ssl.create_default_context()
         context.check_hostname = False
@@ -813,8 +815,9 @@ def send_grouped_reminder_email(
             recipients = [leader_email]
             if unique_cc_emails:
                 recipients.extend(unique_cc_emails)
-            
-            server.sendmail(email_config['sender_email'], recipients, message.as_string())
+
+            # Use auth_email for SMTP envelope, but From header shows all 3 emails
+            server.sendmail(email_config['auth_email'], recipients, message.as_string())
             print(f"Grouped email sent successfully to {leader_email} with CC: {', '.join(unique_cc_emails) if unique_cc_emails else 'None'}")
             return True
             
