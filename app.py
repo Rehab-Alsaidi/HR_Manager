@@ -740,8 +740,19 @@ def send_grouped_reminder_email(
                 )
                 completion_note = ""
             
-            # Find the earliest deadline
+            # Find the earliest deadline and calculate one week before for contract renewal
             earliest_date = min(emp['deadline_date'] for emp in employees_data)
+
+            # If it's a contract renewal, calculate one week before the contract end date
+            if evaluation_type == "Contract Renewal Evaluation":
+                # Parse the earliest date and subtract 7 days
+                try:
+                    from datetime import datetime, timedelta
+                    earliest_date_obj = datetime.strptime(earliest_date, "%Y-%m-%d")
+                    one_week_before = earliest_date_obj - timedelta(days=7)
+                    earliest_date = one_week_before.strftime("%Y-%m-%d")
+                except:
+                    pass  # Keep original date if parsing fails
             
             # Create employee table rows
             employee_rows = ""
@@ -752,7 +763,6 @@ def send_grouped_reminder_email(
                     <td style="padding: 8px; border: 1px solid #ddd;"><strong>{emp['name']}</strong></td>
                     <td style="padding: 8px; border: 1px solid #ddd;">{emp.get('employee_crm', 'N/A')}</td>
                     <td style="padding: 8px; border: 1px solid #ddd;">{emp.get('department', 'N/A')}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">{emp['deadline_date']}</td>
                     <td style="padding: 8px; border: 1px solid #ddd; color: #dc3545; font-weight: bold;">{emp['days_remaining']} days</td>
                 </tr>"""
             
@@ -784,8 +794,7 @@ def send_grouped_reminder_email(
                     <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Employee Name</th>
                     <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">CRM</th>
                     <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Team</th>
-                    <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Evaluation End Date</th>
-                    <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Days Remaining</th>
+                    <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Days Remaining for Contract</th>
                 </tr>
             </thead>
             <tbody>
@@ -920,11 +929,18 @@ def check_and_send_reminders(employees_data, additional_cc_emails=None):
                 if 1 <= days_remaining <= 20:
                     chosen_evaluation = "Probation Period Evaluation"
                     chosen_days = days_remaining
-                    # Calculate the date
-                    chosen_date = today + timedelta(days=days_remaining)
+                    # Use the actual probation end date, not a calculated date
+                    if probation_end:
+                        if isinstance(probation_end, (int, float)):
+                            chosen_date = excel_date_to_python(probation_end).date()
+                        else:
+                            chosen_date = datetime.strptime(str(probation_end), "%Y-%m-%d").date()
+                    else:
+                        # Fallback to calculated date only if actual date is missing
+                        chosen_date = today + timedelta(days=days_remaining)
             except:
                 pass
-        
+
         # Check contract remaining days (direct from Base)
         if contract_remaining_days is not None:
             try:
@@ -935,8 +951,15 @@ def check_and_send_reminders(employees_data, additional_cc_emails=None):
                     if chosen_evaluation is None or chosen_evaluation != "Probation Period Evaluation":
                         chosen_evaluation = "Contract Renewal Evaluation"
                         chosen_days = days_remaining
-                        # Calculate the date
-                        chosen_date = today + timedelta(days=days_remaining)
+                        # Use the actual contract renewal date, not a calculated date
+                        if contract_renewal:
+                            if isinstance(contract_renewal, (int, float)):
+                                chosen_date = excel_date_to_python(contract_renewal).date()
+                            else:
+                                chosen_date = datetime.strptime(str(contract_renewal), "%Y-%m-%d").date()
+                        else:
+                            # Fallback to calculated date only if actual date is missing
+                            chosen_date = today + timedelta(days=days_remaining)
             except:
                 pass
         
@@ -1098,8 +1121,15 @@ def todays_reminders():
                     if 1 <= days_remaining <= 20:
                         chosen_evaluation = "Probation Period Evaluation"
                         chosen_days = days_remaining
-                        # Calculate the date
-                        chosen_date = today + timedelta(days=days_remaining)
+                        # Use the actual probation end date, not a calculated date
+                        if probation_end:
+                            if isinstance(probation_end, (int, float)):
+                                chosen_date = excel_date_to_python(probation_end).date()
+                            else:
+                                chosen_date = datetime.strptime(str(probation_end), "%Y-%m-%d").date()
+                        else:
+                            # Fallback to calculated date only if actual date is missing
+                            chosen_date = today + timedelta(days=days_remaining)
                 except:
                     pass
 
@@ -1113,8 +1143,15 @@ def todays_reminders():
                         if chosen_evaluation is None or chosen_evaluation != "Probation Period Evaluation":
                             chosen_evaluation = "Contract Renewal Evaluation"
                             chosen_days = days_remaining
-                            # Calculate the date
-                            chosen_date = today + timedelta(days=days_remaining)
+                            # Use the actual contract renewal date, not a calculated date
+                            if contract_renewal:
+                                if isinstance(contract_renewal, (int, float)):
+                                    chosen_date = excel_date_to_python(contract_renewal).date()
+                                else:
+                                    chosen_date = datetime.strptime(str(contract_renewal), "%Y-%m-%d").date()
+                            else:
+                                # Fallback to calculated date only if actual date is missing
+                                chosen_date = today + timedelta(days=days_remaining)
                 except:
                     pass
 
@@ -1456,8 +1493,15 @@ def preview_reminders():
                     if 1 <= days_remaining <= 20:
                         chosen_evaluation = "Probation Period Evaluation"
                         chosen_days = days_remaining
-                        # Calculate the date
-                        chosen_date = today + timedelta(days=days_remaining)
+                        # Use the actual probation end date, not a calculated date
+                        if probation_end:
+                            if isinstance(probation_end, (int, float)):
+                                chosen_date = excel_date_to_python(probation_end).date()
+                            else:
+                                chosen_date = datetime.strptime(str(probation_end), "%Y-%m-%d").date()
+                        else:
+                            # Fallback to calculated date only if actual date is missing
+                            chosen_date = today + timedelta(days=days_remaining)
                 except:
                     pass
 
@@ -1471,8 +1515,15 @@ def preview_reminders():
                         if chosen_evaluation is None or chosen_evaluation != "Probation Period Evaluation":
                             chosen_evaluation = "Contract Renewal Evaluation"
                             chosen_days = days_remaining
-                            # Calculate the date
-                            chosen_date = today + timedelta(days=days_remaining)
+                            # Use the actual contract renewal date, not a calculated date
+                            if contract_renewal:
+                                if isinstance(contract_renewal, (int, float)):
+                                    chosen_date = excel_date_to_python(contract_renewal).date()
+                                else:
+                                    chosen_date = datetime.strptime(str(contract_renewal), "%Y-%m-%d").date()
+                            else:
+                                # Fallback to calculated date only if actual date is missing
+                                chosen_date = today + timedelta(days=days_remaining)
                 except:
                     pass
 
@@ -2230,58 +2281,52 @@ def get_vendor_email(contract_company):
     """Get vendor email based on contract company name"""
     if not contract_company:
         return None, None
-    
+
     company_lower = str(contract_company).lower()
-    
+
+    # All vendor notifications go to alsaidirehab@51talk.com
     if 'ضمة للاستشارات' in company_lower or 'dummah' in company_lower:
-        return 'dummah@gmail.com', 'شركة ضمة للاستشارات ذات مسؤولية محدودة'
+        return 'alsaidirehab@51talk.com', 'شركة ضمة للاستشارات ذات مسؤولية محدودة'
     elif 'migrate business services' in company_lower:
-        return 'migrate@gmail.com', 'Migrate Business Services Co.'
+        return 'alsaidirehab@51talk.com', 'Migrate Business Services Co.'
     elif 'helloworld online education jordan llc' in company_lower:
         return None, 'Helloworld Online Education Jordan LLC'  # No action needed
     else:
-        return None, f'Unknown Vendor (Company: {contract_company})'
+        # For any other vendors, also send to alsaidirehab@51talk.com
+        return 'alsaidirehab@51talk.com', f'Vendor (Company: {contract_company})'
 
 def send_vendor_notification_grouped(employees_data, vendor_email, vendor_name):
     """Send vendor notification email for multiple separated employees grouped by company"""
     if not vendor_email:
         return False, "No email configured for this vendor"
-    
+
     try:
-        # Use same email configuration as reminders
-        smtp_accounts = [
-            {
-                'smtp_server': os.getenv('SMTP_SERVER', 'smtp.gmail.com'),
-                'smtp_port': int(os.getenv('SMTP_PORT', 587)),
-                'email': os.getenv('SMTP_EMAIL'),
-                'password': os.getenv('SMTP_PASSWORD')
-            }
-        ]
-        
-        # Select random SMTP account
-        smtp_config = random.choice([acc for acc in smtp_accounts if acc['email'] and acc['password']])
-        
+        # Use specific sender credentials for vendor notifications
+        smtp_config = {
+            'smtp_server': os.getenv('SMTP_SERVER', 'smtp.qiye.aliyun.com'),
+            'smtp_port': int(os.getenv('SMTP_PORT', 465)),
+            'email': os.getenv('SENDER_EMAIL', 'sarakhateeb@51talk.com'),
+            'password': os.getenv('EMAIL_PASSWORD', 'OTCySfjutTyzkLei')
+        }
+
+        print(f"🔧 SMTP Config - Server: {smtp_config['smtp_server']}, Port: {smtp_config['smtp_port']}, Email: {smtp_config['email']}")
+
         # Create email message
         message = MIMEMultipart("alternative")
         message["From"] = smtp_config['email']
         message["To"] = vendor_email
         message["Subject"] = f"Employee Separation Notification - {len(employees_data)} Employee(s)"
-        
-        # Create professional HTML content with table
-        # Filter for October employees only
-        october_employees = []
-        for emp in employees_data:
-            exit_date = emp.get('exit_date', '')
-            if exit_date and '2024-10' in str(exit_date):
-                october_employees.append(emp)
 
-        # Create table rows with employee names and exit dates
+        # Create table rows with employee names, exit dates, and last working dates
         table_rows = ""
-        for emp in october_employees:
+        for emp in employees_data:
+            exit_date = emp.get('exit_date', 'Not specified')
+            last_working_date = emp.get('last_working_date', 'Not specified')
             table_rows += f"""
                 <tr>
                     <td style="padding: 12px; border: 1px solid #ddd;">{emp['name']}</td>
-                    <td style="padding: 12px; border: 1px solid #ddd;">{emp.get('exit_date', 'Not specified')}</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">{exit_date}</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">{last_working_date}</td>
                 </tr>"""
 
         html_content = f"""
@@ -2291,7 +2336,7 @@ def send_vendor_notification_grouped(employees_data, vendor_email, vendor_name):
             <meta charset="utf-8">
             <style>
                 body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f8f9fa; }}
-                .container {{ max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+                .container {{ max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
                 .header {{ text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #007bff; }}
                 .title {{ color: #007bff; font-size: 24px; font-weight: bold; margin-bottom: 10px; }}
                 .company-name {{ color: #333; font-size: 18px; margin-bottom: 20px; }}
@@ -2311,13 +2356,14 @@ def send_vendor_notification_grouped(employees_data, vendor_email, vendor_name):
 
                 <p>Dear {vendor_name},</p>
 
-                <p>We would like to inform you that the following {len(october_employees)} employee(s) separated in October:</p>
+                <p>We would like to inform you that the following {len(employees_data)} employee(s) have been separated:</p>
 
                 <table style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #ddd;">
                     <thead>
                         <tr style="background-color: #007bff;">
                             <th style="padding: 12px; border: 1px solid #ddd; text-align: left; color: white;">Employee Name</th>
                             <th style="padding: 12px; border: 1px solid #ddd; text-align: left; color: white;">Exit Date</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; color: white;">Last Working Date</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -2337,25 +2383,39 @@ def send_vendor_notification_grouped(employees_data, vendor_email, vendor_name):
         </body>
         </html>
         """
-        
+
         # Attach HTML content
         html_part = MIMEText(html_content, "html")
         message.attach(html_part)
-        
+
         # Send email
         context = ssl.create_default_context()
-        with smtplib.SMTP(smtp_config['smtp_server'], smtp_config['smtp_port']) as server:
-            server.starttls(context=context)
-            server.login(smtp_config['email'], smtp_config['password'])
-            text = message.as_string()
-            server.sendmail(smtp_config['email'], vendor_email, text)
-        
+        # For Aliyun SMTP, disable certificate verification
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+
+        # Use SMTP_SSL for port 465, regular SMTP with STARTTLS for port 587
+        if smtp_config['smtp_port'] == 465:
+            with smtplib.SMTP_SSL(smtp_config['smtp_server'], smtp_config['smtp_port'], context=context) as server:
+                server.login(smtp_config['email'], smtp_config['password'])
+                text = message.as_string()
+                server.sendmail(smtp_config['email'], vendor_email, text)
+        else:
+            with smtplib.SMTP(smtp_config['smtp_server'], smtp_config['smtp_port']) as server:
+                server.starttls(context=context)
+                server.login(smtp_config['email'], smtp_config['password'])
+                text = message.as_string()
+                server.sendmail(smtp_config['email'], vendor_email, text)
+
         employee_names = ", ".join([emp['name'] for emp in employees_data])
         print(f"✅ Vendor notification sent to {vendor_name} ({vendor_email}) for {len(employees_data)} employees: {employee_names}")
         return True, "Email sent successfully"
-        
+
     except Exception as e:
+        import traceback
         print(f"❌ Failed to send vendor notification: {str(e)}")
+        print(f"📍 Full error traceback:")
+        traceback.print_exc()
         return False, str(e)
 
 @app.route('/api/today-reminders')
@@ -2488,6 +2548,7 @@ def check_separated_employees():
                     'crm': crm or 'Not specified',
                     'exit_reason': exit_reason or 'Not specified',
                     'exit_date': exit_date_formatted,
+                    'last_working_date': exit_date_formatted,  # Use exit_date as last working date
                     'vendor_email': vendor_email,
                     'vendor_name': vendor_name,
                     'position': position or 'Not specified',
