@@ -7,19 +7,24 @@ from typing import Optional, List, Dict, Any
 def get_db_connection():
     """Get database connection using DATABASE_URL from environment"""
     database_url = os.getenv('DATABASE_URL')
-    if not database_url:
-        raise Exception("DATABASE_URL environment variable is required")
-    
+    if not database_url or 'username:password@hostname' in database_url:
+        # DATABASE_URL not configured or is placeholder - use file-based storage
+        return None
+
     try:
         conn = psycopg2.connect(database_url)
         return conn
     except Exception as e:
         print(f"Database connection failed: {e}")
-        raise
+        return None
 
 def init_database():
     """Initialize database tables for HR evaluation system"""
     conn = get_db_connection()
+    if not conn:
+        print("📝 Database not configured - using file-based storage")
+        return
+
     cursor = conn.cursor()
     
     try:
@@ -56,6 +61,9 @@ def init_database():
 def is_email_sent_today_db(employee_name: str, leader_email: str, evaluation_type: str) -> bool:
     """Check if email was already sent today using database"""
     conn = get_db_connection()
+    if not conn:
+        raise Exception("Database not available")
+
     cursor = conn.cursor()
     
     try:
@@ -81,6 +89,9 @@ def is_email_sent_today_db(employee_name: str, leader_email: str, evaluation_typ
 def mark_email_sent_db(employee_name: str, leader_email: str, evaluation_type: str):
     """Mark email as sent in database"""
     conn = get_db_connection()
+    if not conn:
+        raise Exception("Database not available")
+
     cursor = conn.cursor()
     
     try:

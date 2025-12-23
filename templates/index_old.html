@@ -1,0 +1,1654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR Evaluation Dashboard - Professional</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --primary-light: #3b82f6;
+            --primary-dark: #1d4ed8;
+            --secondary: #64748b;
+            --accent: #8b5cf6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #06b6d4;
+
+            --dark-900: #0f172a;
+            --dark-800: #1e293b;
+            --dark-700: #334155;
+            --dark-600: #475569;
+            --dark-500: #64748b;
+            --dark-400: #94a3b8;
+            --dark-300: #cbd5e1;
+            --dark-200: #e2e8f0;
+            --dark-100: #f1f5f9;
+
+            --white: #ffffff;
+            --glass: rgba(30, 41, 59, 0.95);
+            --glass-border: rgba(71, 85, 105, 0.3);
+            --backdrop: rgba(15, 23, 42, 0.95);
+
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+            --border-radius: 8px;
+            --border-radius-lg: 12px;
+            --border-radius-xl: 16px;
+            --border-radius-2xl: 20px;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: radial-gradient(ellipse at top, rgba(59, 130, 246, 0.05) 0%, var(--dark-900) 50%);
+            color: var(--dark-200);
+            line-height: 1.5;
+            min-height: 100vh;
+            margin: 0;
+            position: relative;
+            overflow-x: hidden;
+            display: flex;
+        }
+        
+        #particles-js {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            opacity: 0.3;
+        }
+        
+        .floating-shapes {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        
+        .floating-shapes::before,
+        .floating-shapes::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.1;
+        }
+        
+        .floating-shapes::before {
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
+            top: 20%;
+            left: 10%;
+            animation: float 20s ease-in-out infinite;
+        }
+        
+        .floating-shapes::after {
+            width: 200px;
+            height: 200px;
+            background: linear-gradient(45deg, #ec4899, #f59e0b);
+            bottom: 20%;
+            right: 10%;
+            animation: float 15s ease-in-out infinite reverse;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            33% { transform: translateY(-30px) rotate(120deg); }
+            66% { transform: translateY(30px) rotate(240deg); }
+        }
+
+        .sidebar {
+            width: 250px;
+            min-width: 250px;
+            background: var(--dark-800);
+            border-right: 1px solid var(--dark-600);
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--dark-600);
+        }
+
+        .sidebar-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--white);
+            margin: 0;
+        }
+
+        .sidebar-nav {
+            padding: 1rem;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+            background: var(--dark-700);
+            border: 1px solid var(--dark-600);
+            border-radius: var(--border-radius);
+            color: var(--dark-200);
+            text-decoration: none;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .nav-item:hover {
+            background: var(--dark-600);
+            color: var(--white);
+            transform: translateX(2px);
+        }
+
+        .nav-item i {
+            width: 20px;
+            margin-right: 0.5rem;
+        }
+
+        .nav-count {
+            float: right;
+            background: #3b82f6;
+            color: white;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+
+        .nav-names {
+            font-size: 0.75rem;
+            color: var(--dark-400);
+            margin-top: 0.25rem;
+            line-height: 1.2;
+            max-height: 100px;
+            overflow-y: auto;
+            word-wrap: break-word;
+        }
+
+        .nav-names:empty::after {
+            content: "None";
+            color: var(--dark-500);
+            font-style: italic;
+        }
+
+        .main-content {
+            flex: 1;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--dark-800) 0%, var(--dark-700) 100%);
+            padding: 4rem 2rem;
+            border-radius: var(--border-radius-2xl);
+            margin-bottom: 2rem;
+            border: 1px solid var(--dark-600);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(59, 130, 246, 0.05), rgba(139, 92, 246, 0.05), rgba(236, 72, 153, 0.05));
+            pointer-events: none;
+        }
+
+        .header-content {
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #ffffff 0%, #e5e7eb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            font-size: 1.125rem;
+            color: var(--dark-300);
+            font-weight: 400;
+            position: relative;
+            z-index: 1;
+            opacity: 0.9;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, var(--dark-800) 0%, var(--dark-700) 100%);
+            border: 1px solid var(--dark-600);
+            border-radius: var(--border-radius-xl);
+            padding: 2rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+
+        .stat-card:hover {
+            background: linear-gradient(135deg, var(--dark-700) 0%, var(--dark-600) 100%);
+            border-color: var(--dark-400);
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-info h3 {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--white);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-info p {
+            color: var(--dark-400);
+            font-weight: 400;
+            font-size: 0.875rem;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--border-radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: var(--dark-300);
+            background: var(--dark-700);
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-container {
+            position: relative;
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1rem 1rem 1rem 3rem;
+            background: var(--dark-800);
+            border: 1px solid var(--dark-600);
+            border-radius: var(--border-radius-lg);
+            color: var(--white);
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            background: var(--dark-700);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--dark-400);
+        }
+
+        .filter-dropdown {
+            position: relative;
+        }
+
+        .filter-select {
+            padding: 1rem 2.5rem 1rem 1rem;
+            background: var(--dark-800);
+            border: 1px solid var(--dark-600);
+            border-radius: var(--border-radius-lg);
+            color: var(--white);
+            font-size: 0.875rem;
+            cursor: pointer;
+            appearance: none;
+        }
+
+        .btn {
+            padding: 0.875rem 1.75rem;
+            border: 1px solid var(--dark-600);
+            border-radius: var(--border-radius-lg);
+            font-weight: 500;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            background: linear-gradient(135deg, var(--dark-800) 0%, var(--dark-700) 100%);
+            color: var(--dark-200);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.6s;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn:hover {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            border-color: #3b82f6;
+            color: var(--white);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+        }
+
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 1.5rem;
+            display: none;
+            font-weight: 500;
+            border: 1px solid;
+        }
+
+        .alert-success {
+            background: rgba(6, 95, 70, 0.1);
+            color: #059669;
+            border-color: #059669;
+        }
+
+        .alert-error {
+            background: rgba(153, 27, 27, 0.1);
+            color: #dc2626;
+            border-color: #dc2626;
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            z-index: 1000;
+            max-width: 400px;
+        }
+
+        .toast {
+            background: linear-gradient(135deg, var(--dark-800) 0%, var(--dark-700) 100%);
+            border: 1px solid var(--dark-600);
+            border-radius: var(--border-radius-lg);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            transform: translateX(100%);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast-success {
+            border-left: 4px solid #10b981;
+        }
+
+        .toast-error {
+            border-left: 4px solid #ef4444;
+        }
+
+        .toast-warning {
+            border-left: 4px solid #f59e0b;
+        }
+
+        .toast-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .toast-title {
+            font-weight: 600;
+            color: var(--white);
+        }
+
+        .toast-close {
+            background: none;
+            border: none;
+            color: var(--dark-400);
+            font-size: 1.25rem;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .toast-close:hover {
+            color: var(--white);
+        }
+
+        .table-container {
+            background: linear-gradient(135deg, var(--dark-800) 0%, rgba(31, 41, 55, 0.95) 100%);
+            border: 1px solid var(--dark-600);
+            border-radius: var(--border-radius-2xl);
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            position: relative;
+        }
+
+        .table-header {
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--dark-600);
+            background: var(--dark-700);
+        }
+
+        .table-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--white);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .table-title i {
+            color: var(--dark-400);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            position: relative;
+            scroll-behavior: smooth;
+        }
+
+        .scroll-arrows {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .scroll-arrow {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            border: 2px solid #60a5fa;
+            border-radius: 8px;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            pointer-events: auto;
+            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+            backdrop-filter: blur(10px);
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .scroll-arrow:hover {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+            border-color: #3b82f6;
+            color: white;
+            transform: scale(1.05);
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.6);
+        }
+
+        .scroll-arrow.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+
+        .scroll-indicator {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            background: rgba(31, 41, 55, 0.9);
+            padding: 0.5rem 1rem;
+            border-radius: var(--border-radius-lg);
+            border: 1px solid var(--dark-600);
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
+
+        .scroll-indicator-text {
+            font-size: 0.75rem;
+            color: var(--dark-400);
+        }
+
+        .scroll-progress {
+            width: 100px;
+            height: 4px;
+            background: var(--dark-600);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .scroll-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        table {
+            width: max-content;
+            min-width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--dark-600);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            vertical-align: middle;
+            box-sizing: border-box;
+        }
+        
+        /* Specific column widths for better alignment */
+        th:nth-child(1), td:nth-child(1) { width: 160px; } /* Employee */
+        th:nth-child(2), td:nth-child(2) { width: 100px; } /* Leader */
+        th:nth-child(3), td:nth-child(3) { width: 120px; } /* Probation */
+        th:nth-child(4), td:nth-child(4) { width: 120px; } /* Contract */
+        th:nth-child(5), td:nth-child(5) { width: 110px; } /* Forms */
+        th:nth-child(6), td:nth-child(6) { width: 100px; } /* Status */
+        th:nth-child(7), td:nth-child(7) { width: 110px; } /* Position */
+        th:nth-child(8), td:nth-child(8) { width: 180px; } /* Leader Email */
+        th:nth-child(9), td:nth-child(9) { width: 120px; } /* Leader CRM */
+        th:nth-child(10), td:nth-child(10) { width: 120px; } /* Department */
+        th:nth-child(11), td:nth-child(11) { width: 180px; } /* 2+Leader Email */
+        th:nth-child(12), td:nth-child(12) { width: 120px; } /* Employee CRM */
+
+        th {
+            background: var(--dark-700);
+            color: var(--dark-300);
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        th i {
+            margin-right: 0.375rem;
+            color: var(--dark-400);
+        }
+
+        tbody tr {
+            transition: background-color 0.2s ease;
+        }
+
+        tbody tr:hover {
+            background: var(--dark-700);
+        }
+
+        .employee-name {
+            font-weight: 500;
+            color: var(--white);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .employee-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: var(--border-radius);
+            background: var(--dark-600);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--dark-300);
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .leader-name {
+            color: var(--dark-400);
+            font-weight: 400;
+        }
+
+        .date-cell {
+            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+            font-size: 0.875rem;
+            color: var(--dark-300);
+        }
+
+        .date-urgent {
+            color: #dc2626;
+            font-weight: 500;
+        }
+
+        .date-warning {
+            color: #d97706;
+            font-weight: 500;
+        }
+
+        .date-normal {
+            color: var(--dark-400);
+        }
+
+        .evaluation-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            color: var(--dark-200);
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 0.75rem;
+            background: var(--dark-700);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--dark-600);
+            transition: all 0.2s ease;
+            font-size: 0.75rem;
+        }
+
+        .evaluation-link:hover {
+            background: var(--dark-600);
+            border-color: var(--dark-500);
+            color: var(--white);
+        }
+
+        .status-badge {
+            padding: 0.375rem 0.75rem;
+            border-radius: var(--border-radius);
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            border: 1px solid;
+        }
+
+        .status-active {
+            background: rgba(6, 95, 70, 0.1);
+            color: #059669;
+            border-color: #059669;
+        }
+
+        .status-pending {
+            background: rgba(146, 64, 14, 0.1);
+            color: #d97706;
+            border-color: #d97706;
+        }
+
+        .status-sent {
+            background: rgba(31, 41, 55, 0.5);
+            color: #6b7280;
+            border-color: #6b7280;
+        }
+
+        .email-cell {
+            color: var(--dark-400);
+            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+            font-size: 0.75rem;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--dark-600);
+            border-radius: 50%;
+            border-top-color: var(--dark-400);
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            .header h1 { font-size: 2rem; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .toolbar { flex-direction: column; align-items: stretch; }
+            .search-container { min-width: auto; }
+            th, td { padding: 0.75rem 0.5rem; }
+            .toast-container { right: 1rem; left: 1rem; max-width: none; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-title">HR Dashboard</div>
+        </div>
+
+        <div class="sidebar-nav">
+            <a href="/reminders" class="nav-item">
+                <i class="fas fa-bell"></i>
+                Today's Reminders
+                <span class="nav-count" id="reminderCount">0</span>
+                <div id="reminderNames" class="nav-names"></div>
+            </a>
+
+            <a href="/vendor-notifications" class="nav-item">
+                <i class="fas fa-building"></i>
+                Vendor Notifications
+                <span class="nav-count" id="vendorCount">0</span>
+                <div id="vendorNames" class="nav-names"></div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container">
+        <div class="header">
+            <div class="header-content">
+                <h1>HR Evaluation Dashboard</h1>
+                <p>Employee evaluation tracking and management system</p>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card" style="--gradient-color: #3b82f6;">
+                <div class="stat-content" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="stat-info">
+                        <h3 id="totalEmployees" style="background: linear-gradient(45deg, #3b82f6, #60a5fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">{{ total_employees }}</h3>
+                        <p>Total Employees</p>
+                        <div style="width: 40px; height: 2px; background: linear-gradient(90deg, #3b82f6, transparent); margin-top: 0.5rem; border-radius: 1px;"></div>
+                    </div>
+                    <div class="stat-icon" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05)); border: 1px solid rgba(59, 130, 246, 0.2);">
+                        <i class="fas fa-users" style="color: #3b82f6;"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card" style="--gradient-color: #ef4444;">
+                <div class="stat-content" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="stat-info">
+                        <h3 id="urgentCount" style="background: linear-gradient(45deg, #ef4444, #f87171); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">0</h3>
+                        <p>Urgent Reviews</p>
+                        <div style="width: 40px; height: 2px; background: linear-gradient(90deg, #ef4444, transparent); margin-top: 0.5rem; border-radius: 1px;"></div>
+                    </div>
+                    <div class="stat-icon" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05)); border: 1px solid rgba(239, 68, 68, 0.2);">
+                        <i class="fas fa-exclamation-triangle" style="color: #ef4444;"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card" style="--gradient-color: #f59e0b;">
+                <div class="stat-content" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="stat-info">
+                        <h3 id="warningCount" style="background: linear-gradient(45deg, #f59e0b, #fbbf24); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">0</h3>
+                        <p>Warning Reviews</p>
+                        <div style="width: 40px; height: 2px; background: linear-gradient(90deg, #f59e0b, transparent); margin-top: 0.5rem; border-radius: 1px;"></div>
+                    </div>
+                    <div class="stat-icon" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05)); border: 1px solid rgba(245, 158, 11, 0.2);">
+                        <i class="fas fa-clock" style="color: #f59e0b;"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card" style="--gradient-color: #10b981;">
+                <div class="stat-content" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="stat-info">
+                        <h3 id="emailsSent" style="background: linear-gradient(45deg, #10b981, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">0</h3>
+                        <p>Emails Sent</p>
+                        <div style="width: 40px; height: 2px; background: linear-gradient(90deg, #10b981, transparent); margin-top: 0.5rem; border-radius: 1px;"></div>
+                    </div>
+                    <div class="stat-icon" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05)); border: 1px solid rgba(16, 185, 129, 0.2);">
+                        <i class="fas fa-paper-plane" style="color: #10b981;"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card" style="--gradient-color: #8b5cf6;">
+                <div class="stat-content" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="stat-info">
+                        <h3 id="todayEmailsSent" style="background: linear-gradient(45deg, #8b5cf6, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">0</h3>
+                        <p>Today's Emails</p>
+                        <div style="width: 40px; height: 2px; background: linear-gradient(90deg, #8b5cf6, transparent); margin-top: 0.5rem; border-radius: 1px;"></div>
+                    </div>
+                    <div class="stat-icon" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05)); border: 1px solid rgba(139, 92, 246, 0.2);">
+                        <i class="fas fa-paper-plane" style="color: #8b5cf6;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="toolbar">
+            <div class="search-container">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="search-input" placeholder="Search employees, leaders, or emails..." oninput="filterTable(this.value)">
+            </div>
+            <div class="filter-dropdown">
+                <select class="filter-select" onchange="filterByStatus(this.value)">
+                    <option value="all">All Statuses</option>
+                    <option value="Active">Active</option>
+                    <option value="Email Sent">Email Sent</option>
+                    <option value="Pending">Pending</option>
+                </select>
+            </div>
+            <button class="btn" onclick="refreshData()">
+                <i class="fas fa-sync-alt"></i>
+                <span>Refresh Data</span>
+            </button>
+            <a href="/reminders" class="btn" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;">
+                <i class="fas fa-calendar-day"></i>
+                <span>Today's Reminders</span>
+            </a>
+            <button class="btn" onclick="previewEmails()">
+                <i class="fas fa-eye"></i>
+                <span>Preview Emails</span>
+            </button>
+            <button class="btn" onclick="exportData()">
+                <i class="fas fa-download"></i>
+                <span>Export CSV</span>
+            </button>
+        </div>
+
+        <div id="alert" class="alert"></div>
+
+        <div class="toast-container" id="toastContainer"></div>
+
+        <div class="floating-shapes"></div>
+        <div id="particles-js"></div>
+
+        <div class="table-container">
+            <div class="table-header">
+                <div class="table-title">
+                    <i class="fas fa-table"></i>
+                    Employee Evaluation Overview
+                </div>
+            </div>
+            <div class="table-wrapper" id="tableWrapper">
+                <!-- Scroll Arrows -->
+                <div class="scroll-arrows">
+                    <div class="scroll-arrow" id="scrollLeft" onclick="scrollTableLeft()" title="Scroll Left">
+                        <i class="fas fa-chevron-left"></i>
+                    </div>
+                    <div class="scroll-arrow" id="scrollRight" onclick="scrollTableRight()" title="Scroll Right">
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+                </div>
+                
+                <!-- Scroll Progress Indicator -->
+                <div class="scroll-indicator" id="scrollIndicator">
+                    <span class="scroll-indicator-text">Scroll Progress</span>
+                    <div class="scroll-progress">
+                        <div class="scroll-progress-bar" id="scrollProgressBar"></div>
+                    </div>
+                    <span class="scroll-indicator-text" id="scrollPercentage">0%</span>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th><i class="fas fa-user"></i> Employee</th>
+                            <th><i class="fas fa-user-tie"></i> Leader</th>
+                            <th><i class="fas fa-calendar-alt"></i> Probation End</th>
+                            <th><i class="fas fa-calendar-check"></i> Contract Renewal</th>
+                            <th><i class="fas fa-clipboard-list"></i> Evaluation Forms</th>
+                            <th><i class="fas fa-info-circle"></i> Status</th>
+                            <th><i class="fas fa-briefcase"></i> Position</th>
+                            <th><i class="fas fa-envelope"></i> Leader Email</th>
+                            <th><i class="fas fa-id-badge"></i> Leader CRM</th>
+                            <th><i class="fas fa-building"></i> Department</th>
+                            <th><i class="fas fa-envelope-open-text"></i> 2+Leader Email</th>
+                            <th><i class="fas fa-user-tag"></i> Employee CRM</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if employees and employees|length > 1 %}
+                            {% for employee in employees[1:] %}
+                            {% if employee|length >= 12 %}
+                            <tr>
+                                <td class="employee-name">
+                                    <div class="employee-avatar">
+                                        {{ employee[0][0].upper() if employee[0] and employee[0]|length > 0 else 'U' }}
+                                    </div>
+                                    <span>{{ employee[0] or '-' }}</span>
+                                </td>
+                                <td class="leader-name">{{ employee[1] or 'Manager' }}</td>
+                                <td class="date-cell">
+                                    <span class="date-normal">{{ employee[2] or '-' }}</span>
+                                </td>
+                                <td class="date-cell">
+                                    <span class="date-normal">{{ employee[3] or '-' }}</span>
+                                </td>
+                                <td style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                    {% if employee[4] %}
+                                        <a href="{{ employee[4] }}"
+                                           target="_blank"
+                                           class="evaluation-link">
+                                            {% if 'probation' in employee[4]|lower %}
+                                                <i class="fas fa-user-clock"></i>
+                                                <span>Probation</span>
+                                            {% else %}
+                                                <i class="fas fa-file-contract"></i>
+                                                <span>Contract</span>
+                                            {% endif %}
+                                        </a>
+                                    {% else %}
+                                        <a href="https://docs.google.com/forms/d/e/1FAIpQLSdTzbajU0IK9Lz6VItd7D-ZdWlQZ2qvEsiJtBvFmpIEJQgf7Q/viewform"
+                                           target="_blank"
+                                           class="evaluation-link">
+                                            <i class="fas fa-user-clock"></i>
+                                            <span>Probation</span>
+                                        </a>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% set status = employee[5] or 'Pending' %}
+                                    <span class="status-badge {% if status == 'Email Sent' %}status-sent{% elif status == 'Active' or status != 'Pending' %}status-active{% else %}status-pending{% endif %}">
+                                        {% if status == 'Email Sent' %}
+                                            <i class="fas fa-paper-plane"></i>
+                                        {% elif status == 'Active' or status != 'Pending' %}
+                                            <i class="fas fa-check-circle"></i>
+                                        {% else %}
+                                            <i class="fas fa-clock"></i>
+                                        {% endif %}
+                                        <span>{{ status }}</span>
+                                    </span>
+                                </td>
+                                <td class="email-cell">{{ employee[6] or '-' }}</td>
+                                <td class="email-cell">
+                                    {% if employee[7] and employee[7] != '0' and employee[7].strip() %}
+                                        {{ employee[7] }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td class="email-cell">{{ employee[8] or '-' }}</td>
+                                <td class="email-cell">
+                                    {% if employee[9] and employee[9] != '0' and employee[9].strip() %}
+                                        {{ employee[9] }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td class="email-cell">{{ employee[10] or '-' }}</td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="12" style="text-align: center; padding: 4rem; color: var(--dark-500);">
+                                    <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+                                    <div style="font-size: 1.1rem; margin-bottom: 0.5rem;">No employee data found</div>
+                                    <small style="opacity: 0.7;">Please check your sheet configuration and refresh</small>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Enhanced alert system
+        function showAlert(message, type) {
+            const alert = document.getElementById('alert');
+            alert.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${message}`;
+            alert.className = `alert alert-${type}`;
+            alert.style.display = 'block';
+            
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 6000);
+        }
+
+        // Advanced Toast System
+        function showToast(title, message, type = 'success') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            
+            toast.innerHTML = `
+                <div class="toast-header">
+                    <div class="toast-title">${title}</div>
+                    <button class="toast-close" onclick="this.parentElement.parentElement.remove()">&times;</button>
+                </div>
+                <div class="toast-message">${message}</div>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 100);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 400);
+            }, 5000);
+        }
+
+        // Advanced Search and Filter
+        function filterTable(query) {
+            const rows = document.querySelectorAll('tbody tr');
+            const searchTerm = query.toLowerCase();
+            
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                const text = Array.from(cells).map(cell => cell.textContent.toLowerCase()).join(' ');
+                
+                if (text.includes(searchTerm)) {
+                    row.style.display = '';
+                    row.style.animation = 'slideIn 0.3s ease';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function filterByStatus(status) {
+            const rows = document.querySelectorAll('tbody tr');
+            
+            rows.forEach(row => {
+                const statusCell = row.querySelector('.status-badge span');
+                if (!statusCell) return;
+                
+                const rowStatus = statusCell.textContent.trim();
+                
+                if (status === 'all' || rowStatus === status) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // Export Data Function
+        function exportData() {
+            const rows = document.querySelectorAll('tbody tr:not([style*="display: none"])');
+            let csv = 'Employee Name,Leader Name,Probation End,Contract Renewal,Status,Position,Leader Email,Leader CRM,Department,Employee CRM\\n';
+            
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 11) {
+                    const data = [
+                        cells[0].querySelector('span').textContent.trim(),
+                        cells[1].textContent.trim(),
+                        cells[2].textContent.trim(),
+                        cells[3].textContent.trim(),
+                        cells[5].querySelector('span').textContent.trim(),
+                        cells[6].textContent.trim(),
+                        cells[7].textContent.trim(),
+                        cells[8].textContent.trim(),
+                        cells[9].textContent.trim(),
+                        cells[10].textContent.trim()
+                    ];
+                    csv += data.map(field => `"${field}"`).join(',') + '\\n';
+                }
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `hr_evaluations_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            showToast('Export Complete', 'Data exported successfully as CSV file', 'success');
+        }
+
+        // Initialize Particles
+        function initializeParticles() {
+            particlesJS('particles-js', {
+                particles: {
+                    number: {
+                        value: 80,
+                        density: {
+                            enable: true,
+                            value_area: 800
+                        }
+                    },
+                    color: {
+                        value: '#3b82f6'
+                    },
+                    shape: {
+                        type: 'circle'
+                    },
+                    opacity: {
+                        value: 0.1,
+                        random: false
+                    },
+                    size: {
+                        value: 3,
+                        random: true
+                    },
+                    line_linked: {
+                        enable: true,
+                        distance: 150,
+                        color: '#3b82f6',
+                        opacity: 0.1,
+                        width: 1
+                    },
+                    move: {
+                        enable: true,
+                        speed: 1,
+                        direction: 'none',
+                        random: false,
+                        straight: false,
+                        out_mode: 'out',
+                        bounce: false
+                    }
+                },
+                interactivity: {
+                    detect_on: 'canvas',
+                    events: {
+                        onhover: {
+                            enable: true,
+                            mode: 'repulse'
+                        },
+                        onclick: {
+                            enable: true,
+                            mode: 'push'
+                        },
+                        resize: true
+                    }
+                },
+                retina_detect: true
+            });
+        }
+
+        function updateEmployeeStatus(employeeName, newStatus) {
+            const rows = document.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                const nameCell = row.querySelector('.employee-name span');
+                if (nameCell && nameCell.textContent.trim() === employeeName) {
+                    const statusBadge = row.querySelector('.status-badge');
+                    if (statusBadge) {
+                        statusBadge.className = 'status-badge status-sent';
+                        statusBadge.innerHTML = '<i class="fas fa-paper-plane"></i><span>Email Sent</span>';
+                    }
+                }
+            });
+        }
+
+        // Enhanced date parsing and highlighting
+        function parseExcelDate(excelDate) {
+            if (!excelDate || isNaN(excelDate)) return null;
+            const epoch = new Date(1899, 11, 30);
+            return new Date(epoch.getTime() + (excelDate * 24 * 60 * 60 * 1000));
+        }
+
+        function updateDateHighlights() {
+            const today = new Date();
+            const dateCells = document.querySelectorAll('.date-cell span');
+            let urgentCount = 0;
+            let warningCount = 0;
+            
+            dateCells.forEach(cell => {
+                const dateText = cell.textContent.trim();
+                if (dateText === '-') return;
+                
+                let targetDate = null;
+                if (!isNaN(dateText)) {
+                    targetDate = parseExcelDate(parseInt(dateText));
+                } else {
+                    targetDate = new Date(dateText);
+                }
+                
+                if (targetDate && !isNaN(targetDate.getTime())) {
+                    const timeDiff = targetDate.getTime() - today.getTime();
+                    const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+                    
+                    if (daysDiff <= 25 && daysDiff >= 0) {
+                        cell.className = 'date-urgent';
+                        cell.innerHTML = `<i class="fas fa-exclamation-triangle"></i><span>${dateText} (${daysDiff} days)</span>`;
+                        urgentCount++;
+                    } else if (daysDiff <= 30 && daysDiff > 25) {
+                        cell.className = 'date-warning';
+                        cell.innerHTML = `<i class="fas fa-clock"></i><span>${dateText} (${daysDiff} days)</span>`;
+                        warningCount++;
+                    } else {
+                        cell.className = 'date-normal';
+                        if (daysDiff < 0) {
+                            cell.innerHTML = `<i class="fas fa-times-circle" style="color: var(--danger);"></i><span>${dateText} (overdue)</span>`;
+                        } else {
+                            cell.innerHTML = `<i class="fas fa-calendar"></i><span>${dateText}</span>`;
+                        }
+                    }
+                }
+            });
+            
+            document.getElementById('urgentCount').textContent = urgentCount;
+            document.getElementById('warningCount').textContent = warningCount;
+            
+            if (urgentCount > 0) {
+                showAlert(`🚨 Critical: ${urgentCount} evaluation(s) due within 25 days require immediate attention!`, 'error');
+            } else if (warningCount > 0) {
+                showAlert(`⚠️ Notice: ${warningCount} evaluation(s) due within 30 days. Plan accordingly.`, 'success');
+            }
+        }
+
+        function refreshData() {
+            const btn = event.target.closest('.btn');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<div class="loading"><div class="spinner"></div><span>Loading...</span></div>';
+            btn.disabled = true;
+            
+            showToast('Refreshing Data', 'Fetching latest employee information...', 'success');
+            
+            setTimeout(() => {
+                location.reload();
+            }, 800);
+        }
+
+        function previewEmails() {
+            const btn = event.target.closest('.btn');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<div class="loading"><div class="spinner"></div><span>Loading...</span></div>';
+            btn.disabled = true;
+            
+            fetch('/api/preview-reminders')
+                .then(response => response.json())
+                .then(data => {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                    
+                    if (data.success) {
+                        if (data.preview.length > 0) {
+                            showEmailPreview(data.preview);
+                        } else {
+                            showToast('All Up to Date', 'No reminders needed at this time', 'info');
+                        }
+                    } else {
+                        showToast('Error', 'Failed to load preview: ' + data.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                    showToast('Network Error', error.message, 'error');
+                });
+        }
+
+        function showEmailPreview(previewData) {
+            const modal = document.getElementById('emailPreviewModal');
+            const content = document.getElementById('emailPreviewContent');
+            
+            let html = '<div style="color: var(--dark-200);">';
+            html += `<p style="margin-bottom: 1rem; font-weight: 500;">Ready to send ${previewData.length} email(s) to the following leaders:</p>`;
+            
+            previewData.forEach((group, index) => {
+                html += `
+                    <div style="margin-bottom: 1.5rem; padding: 1rem; background: var(--dark-700); border-radius: var(--border-radius); border: 1px solid var(--dark-600);">
+                        <div style="margin-bottom: 0.75rem;">
+                            <strong style="color: var(--dark-100);">${group.leader_name}</strong> 
+                            <span style="color: var(--dark-400);">(${group.leader_email})</span>
+                        </div>
+                        <div style="margin-bottom: 0.5rem; color: var(--dark-300); font-size: 0.9rem;">
+                            <strong>Type:</strong> ${group.evaluation_type}
+                        </div>
+                        <div style="color: var(--dark-300); font-size: 0.9rem;">
+                            <strong>Employees (${group.employee_count}):</strong>
+                            ${group.employees.map(emp => `
+                                <div style="margin-left: 1rem; margin-top: 0.25rem;">
+                                    • ${emp.name} (${emp.department}) - Due: ${emp.deadline_date} (${emp.days_remaining} days)
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            content.innerHTML = html;
+            modal.style.display = 'block';
+        }
+
+        function closeEmailPreview() {
+            document.getElementById('emailPreviewModal').style.display = 'none';
+        }
+
+        function confirmSendEmails() {
+            const ccEmails = document.getElementById('ccEmails').value.trim();
+            const btn = event.target.closest('.btn');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<div class="loading"><div class="spinner"></div><span>Sending...</span></div>';
+            btn.disabled = true;
+            
+            const requestData = ccEmails ? { cc_emails: ccEmails } : {};
+            
+            fetch('/api/send-reminders', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                    closeEmailPreview();
+                    
+                    if (data.success) {
+                        const count = data.sent_reminders.length;
+                        document.getElementById('emailsSent').textContent = count;
+                        
+                        // Update today's emails counter
+                        const currentTodayCount = parseInt(document.getElementById('todayEmailsSent').textContent) || 0;
+                        document.getElementById('todayEmailsSent').textContent = currentTodayCount + count;
+                        
+                        if (count > 0) {
+                            const ccNote = ccEmails ? ` (CC: ${ccEmails})` : '';
+                            showToast('Emails Sent Successfully', `${count} reminder email(s) sent to team leaders${ccNote}`, 'success');
+                            
+                            // Update status badges for sent emails
+                            data.sent_reminders.forEach(reminder => {
+                                updateEmployeeStatus(reminder.employee, 'Email Sent');
+                            });
+                            
+                            updateDateHighlights();
+                        } else {
+                            showToast('All Up to Date', 'No reminders needed at this time', 'success');
+                        }
+                    } else {
+                        showToast('Error', 'Failed to send reminders: ' + data.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                    closeEmailPreview();
+                    showToast('Network Error', error.message, 'error');
+                });
+        }
+
+
+        // Realistic daily email counter
+        function initializeTodayEmailCounter() {
+            const today = new Date().toDateString();
+            const stored = localStorage.getItem('todayEmailCount');
+            const storedDate = localStorage.getItem('emailCountDate');
+            
+            if (storedDate !== today) {
+                // New day, reset counter
+                localStorage.setItem('todayEmailCount', '0');
+                localStorage.setItem('emailCountDate', today);
+                document.getElementById('todayEmailsSent').textContent = '0';
+            } else {
+                // Same day, use stored count
+                document.getElementById('todayEmailsSent').textContent = stored || '0';
+            }
+        }
+
+
+        // Horizontal Scroll Functions
+        function scrollTableLeft() {
+            const wrapper = document.getElementById('tableWrapper');
+            wrapper.scrollBy({ left: -200, behavior: 'smooth' });
+        }
+
+        function scrollTableRight() {
+            const wrapper = document.getElementById('tableWrapper');
+            wrapper.scrollBy({ left: 200, behavior: 'smooth' });
+        }
+
+        function updateScrollIndicators() {
+            const wrapper = document.getElementById('tableWrapper');
+            const scrollLeft = wrapper.scrollLeft;
+            const scrollWidth = wrapper.scrollWidth - wrapper.clientWidth;
+            const scrollPercentage = scrollWidth > 0 ? (scrollLeft / scrollWidth) * 100 : 0;
+            
+            // Update progress bar
+            const progressBar = document.getElementById('scrollProgressBar');
+            const percentageText = document.getElementById('scrollPercentage');
+            progressBar.style.width = scrollPercentage + '%';
+            percentageText.textContent = Math.round(scrollPercentage) + '%';
+            
+            // Update arrow states
+            const leftArrow = document.getElementById('scrollLeft');
+            const rightArrow = document.getElementById('scrollRight');
+            
+            if (scrollLeft <= 0) {
+                leftArrow.classList.add('disabled');
+            } else {
+                leftArrow.classList.remove('disabled');
+            }
+            
+            if (scrollLeft >= scrollWidth - 1) {
+                rightArrow.classList.add('disabled');
+            } else {
+                rightArrow.classList.remove('disabled');
+            }
+            
+            // Show/hide scroll indicator based on need
+            const scrollIndicator = document.getElementById('scrollIndicator');
+            if (scrollWidth > 10) {
+                scrollIndicator.style.display = 'flex';
+            } else {
+                scrollIndicator.style.display = 'none';
+            }
+        }
+
+        // Sidebar functionality
+        function loadSidebarCounts() {
+            // Load reminder names
+            fetch('/api/today-reminders')
+                .then(response => response.json())
+                .then(data => {
+                    const reminderNames = document.getElementById('reminderNames');
+                    const reminderCount = document.getElementById('reminderCount');
+                    if (data.success && data.reminders.length > 0) {
+                        const names = data.reminders.map(reminder => reminder.employee_name).join(', ');
+                        reminderNames.textContent = names;
+                        reminderCount.textContent = data.reminders.length;
+                        reminderCount.style.display = 'inline-block';
+                    } else {
+                        reminderNames.textContent = '';
+                        reminderCount.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('reminderNames').textContent = 'Error loading';
+                    document.getElementById('reminderCount').style.display = 'none';
+                });
+
+            // Load vendor notification names (today's separated employees only)
+            fetch('/api/check-separated-employees?filter=today')
+                .then(response => response.json())
+                .then(data => {
+                    const vendorNames = document.getElementById('vendorNames');
+                    const vendorCount = document.getElementById('vendorCount');
+                    if (data.success && data.separated_employees.length > 0) {
+                        const names = data.separated_employees.map(emp => emp.name).join(', ');
+                        vendorNames.textContent = names;
+                        vendorCount.textContent = data.separated_employees.length;
+                        vendorCount.style.display = 'inline-block';
+                    } else {
+                        vendorNames.textContent = '';
+                        vendorCount.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('vendorNames').textContent = 'Error loading';
+                    document.getElementById('vendorCount').style.display = 'none';
+                });
+        }
+
+        // Initialize with enhanced animations
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSidebarCounts();
+            updateDateHighlights();
+            initializeParticles();
+            initializeTodayEmailCounter();
+            
+            // Staggered card animations
+            const cards = document.querySelectorAll('.stat-card');
+            cards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(30px)';
+                
+                setTimeout(() => {
+                    card.style.transition = 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+            
+            // Table row entrance animation
+            const rows = document.querySelectorAll('tbody tr');
+            rows.forEach((row, index) => {
+                row.style.opacity = '0';
+                row.style.transform = 'translateX(-20px)';
+                
+                setTimeout(() => {
+                    row.style.transition = 'all 0.6s ease';
+                    row.style.opacity = '1';
+                    row.style.transform = 'translateX(0)';
+                }, 800 + (index * 50));
+            });
+            
+            // Initialize scroll indicators
+            updateScrollIndicators();
+            
+            // Add scroll event listener
+            const wrapper = document.getElementById('tableWrapper');
+            wrapper.addEventListener('scroll', updateScrollIndicators);
+            
+            // Update scroll indicators on window resize
+            window.addEventListener('resize', updateScrollIndicators);
+            
+            // Welcome toast
+            setTimeout(() => {
+                showToast('Welcome to HR Manager', 'Dashboard loaded successfully with live metrics', 'success');
+            }, 1500);
+        });
+
+        // Add slide-in animation keyframe
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    opacity: 0;
+                    transform: translateX(-20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateX(0);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+
+    <!-- Email Preview Modal -->
+    <div id="emailPreviewModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--dark-800); border-radius: var(--border-radius-xl); padding: 2rem; width: 90%; max-width: 800px; max-height: 80vh; overflow-y: auto; border: 1px solid var(--glass-border);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;">
+                <h2 style="color: var(--dark-100); margin: 0;">Email Preview</h2>
+                <button onclick="closeEmailPreview()" style="background: none; border: none; color: var(--dark-400); font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; color: var(--dark-300); margin-bottom: 0.5rem; font-weight: 500;">CC Emails (comma-separated):</label>
+                <input type="email" id="ccEmails" placeholder="email1@example.com, email2@example.com" 
+                       style="width: 100%; padding: 0.75rem; border-radius: var(--border-radius); border: 1px solid var(--dark-600); background: var(--dark-700); color: var(--dark-100); font-size: 0.9rem;" multiple>
+            </div>
+            
+            <div id="emailPreviewContent" style="margin-bottom: 1.5rem;">
+                <!-- Preview content will be loaded here -->
+            </div>
+            
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button onclick="closeEmailPreview()" class="btn" style="background: var(--dark-600);">
+                    <i class="fas fa-times"></i>
+                    <span>Cancel</span>
+                </button>
+                <button onclick="confirmSendEmails()" class="btn" style="background: linear-gradient(135deg, #059669, #10b981);">
+                    <i class="fas fa-paper-plane"></i>
+                    <span>Send Emails</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    </div>
+
+
+</body>
+</html>
