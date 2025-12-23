@@ -1,12 +1,22 @@
+"""
+HR Evaluation System - Main Flask Application.
+
+This module contains the main Flask application for the HR Evaluation
+System, handling employee evaluation reminders, vendor notifications,
+and Lark/Feishu integration.
+"""
+
 import json
 import os
 import random
 import smtplib
 import ssl
+import time
 from datetime import datetime, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import Any, Dict, Optional
+from functools import lru_cache
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import requests
 from dotenv import load_dotenv
@@ -25,11 +35,28 @@ load_dotenv()
 # Feishu API Base Configuration
 BASE = "https://open.feishu.cn/open-apis"
 
+
 class FeishuError(Exception):
+    """Custom exception for Feishu/Lark API errors."""
+
     pass
 
+
 def get_tenant_access_token(app_id: str, app_secret: str) -> str:
-    """Get tenant access token from Feishu API."""
+    """
+    Get tenant access token from Feishu API.
+
+    Args:
+        app_id: Lark application ID
+        app_secret: Lark application secret
+
+    Returns:
+        Tenant access token string
+
+    Raises:
+        FeishuError: If token request fails or API returns error code
+        requests.HTTPError: If HTTP request fails
+    """
     url = f"{BASE}/auth/v3/tenant_access_token/internal"
 
     payload = {"app_id": app_id, "app_secret": app_secret}
@@ -39,7 +66,10 @@ def get_tenant_access_token(app_id: str, app_secret: str) -> str:
     data = r.json()
 
     if data.get("code") != 0:
-        error_msg = f"get_tenant_access_token failed: {data.get('code')} {data.get('msg')}"
+        error_msg = (
+            f"get_tenant_access_token failed: "
+            f"{data.get('code')} {data.get('msg')}"
+        )
         raise FeishuError(error_msg)
 
     return data["tenant_access_token"]
@@ -52,7 +82,24 @@ def list_bitable_records(
     page_token: Optional[str] = None,
     page_size: int = 500
 ) -> Dict[str, Any]:
-    """List records from a Feishu bitable."""
+    """
+    List records from a Feishu bitable with pagination support.
+
+    Args:
+        app_token: Lark Base application token
+        table_id: Table ID within the Base
+        access_token: Access token for authentication
+        view_id: Optional view ID to filter records
+        page_token: Optional pagination token for next page
+        page_size: Number of records per page (default 500)
+
+    Returns:
+        Dictionary containing bitable data with items and pagination info
+
+    Raises:
+        FeishuError: If API request fails or returns error code
+        requests.HTTPError: If HTTP request fails
+    """
     params: Dict[str, Any] = {'page_size': page_size}
     if view_id:
         params['view_id'] = view_id
@@ -65,29 +112,72 @@ def list_bitable_records(
         headers = {"Authorization": f"Bearer {access_token}"}
         r = requests.get(url, headers=headers, params=params, timeout=30)
         r.raise_for_status()
-        
+
         resp = r.json()
         if resp.get('code') != 0:
             error_msg = resp.get('msg', 'Unknown API error')
-            print(f"[ERROR] Bitable API error {resp.get('code')}: {error_msg}")
+            print(
+                f"[ERROR] Bitable API error "
+                f"{resp.get('code')}: {error_msg}"
+            )
             raise FeishuError(f"Bitable API error: {error_msg}")
-        
+
         return resp.get('data', {})
-    
+
     except requests.HTTPError as e:
         error_text = e.response.text
-        print(f"[ERROR] HTTP error while listing bitable records: {error_text}")
-        raise FeishuError(f"HTTP error {e.response.status_code}: {error_text}")
-    
+        print(
+            f"[ERROR] HTTP error while listing bitable "
+            f"records: {error_text}"
+        )
+        raise FeishuError(
+            f"HTTP error {e.response.status_code}: {error_text}"
+        )
+
     except Exception as e:
-        print(f"[ERROR] Unexpected error while listing bitable records: {str(e)}")
+        print(
+            f"[ERROR] Unexpected error while listing bitable "
+            f"records: {str(e)}"
+        )
         raise FeishuError(f"Unexpected error: {str(e)}")
 
 # Persistent duplicate prevention system
 SENT_EMAILS_LOG = "sent_emails_log.json"
 
-def load_sent_emails_log():
-    """Load the log of previously sent emails."""
+# Cache database availability check
+_DATABASE_AVAILABLE: Optional[bool] = None
+
+
+def is_database_available() -> bool:
+    """
+    Check if database is available (cached check).
+
+    Returns:
+        True if PostgreSQL database is available, False otherwise
+
+    Note:
+        Result is cached globally to avoid repeated connection attempts
+    """
+    global _DATABASE_AVAILABLE
+    if _DATABASE_AVAILABLE is None:
+        database_url = os.getenv('DATABASE_URL')
+        _DATABASE_AVAILABLE = (
+            database_url and
+            'username:password@hostname' not in database_url
+        )
+    return _DATABASE_AVAILABLE
+
+
+def load_sent_emails_log() -> Dict[str, Any]:
+    """
+    Load the log of previously sent emails from file.
+
+    Returns:
+        Dictionary containing sent email logs by date
+
+    Note:
+        Returns empty dict if file doesn't exist or can't be loaded
+    """
     try:
         if os.path.exists(SENT_EMAILS_LOG):
             with open(SENT_EMAILS_LOG, 'r') as f:
@@ -96,23 +186,49 @@ def load_sent_emails_log():
         print(f"Error loading sent emails log: {e}")
     return {}
 
-def save_sent_emails_log(log_data):
-    """Save the log of sent emails."""
+
+def save_sent_emails_log(log_data: Dict[str, Any]) -> None:
+    """
+    Save the log of sent emails to file.
+
+    Args:
+        log_data: Dictionary containing sent email logs by date
+    """
     try:
         with open(SENT_EMAILS_LOG, 'w') as f:
             json.dump(log_data, f, indent=2)
     except Exception as e:
         print(f"Error saving sent emails log: {e}")
 
-def is_email_already_sent_today(employee_name, leader_email, evaluation_type):
-    """Check if an email for this employee was already sent today (database or file)."""
-    try:
-        # Try database first
-        database_url = os.getenv('DATABASE_URL')
-        if database_url:
-            return is_email_sent_today_db(employee_name, leader_email, evaluation_type)
-    except Exception as e:
-        print(f"Database check failed, using file: {e}")
+
+def is_email_already_sent_today(
+    employee_name: str,
+    leader_email: str,
+    evaluation_type: str
+) -> bool:
+    """
+    Check if email for this employee was already sent today.
+
+    Uses database if available, falls back to file-based storage.
+
+    Args:
+        employee_name: Name of the employee
+        leader_email: Email address of the leader
+        evaluation_type: Type of evaluation (Probation/Contract)
+
+    Returns:
+        True if email was already sent today, False otherwise
+    """
+    # Use cached database availability check
+    if is_database_available():
+        try:
+            return is_email_sent_today_db(
+                employee_name,
+                leader_email,
+                evaluation_type
+            )
+        except Exception as e:
+            print(f"Database check failed, using file: {e}")
 
     # Fallback to file-based storage
     log_data = load_sent_emails_log()
@@ -123,16 +239,33 @@ def is_email_already_sent_today(employee_name, leader_email, evaluation_type):
 
     return log_data.get(today, {}).get(key, False)
 
-def mark_email_as_sent(employee_name, leader_email, evaluation_type):
-    """Mark an email as sent today (database or file)."""
-    try:
-        # Try database first
-        database_url = os.getenv('DATABASE_URL')
-        if database_url:
-            mark_email_sent_db(employee_name, leader_email, evaluation_type)
+
+def mark_email_as_sent(
+    employee_name: str,
+    leader_email: str,
+    evaluation_type: str
+) -> None:
+    """
+    Mark an email as sent today.
+
+    Uses database if available, falls back to file-based storage.
+
+    Args:
+        employee_name: Name of the employee
+        leader_email: Email address of the leader
+        evaluation_type: Type of evaluation (Probation/Contract)
+    """
+    # Use cached database availability check
+    if is_database_available():
+        try:
+            mark_email_sent_db(
+                employee_name,
+                leader_email,
+                evaluation_type
+            )
             return
-    except Exception as e:
-        print(f"Database marking failed, using file: {e}")
+        except Exception as e:
+            print(f"Database marking failed, using file: {e}")
 
     # Fallback to file-based storage
     log_data = load_sent_emails_log()
@@ -152,16 +285,26 @@ def mark_email_as_sent(employee_name, leader_email, evaluation_type):
 
     save_sent_emails_log(log_data)
 
-def cleanup_old_logs():
-    """Remove logs older than 30 days to prevent file from growing too large."""
+
+def cleanup_old_logs() -> None:
+    """
+    Remove logs older than 30 days to prevent file from growing too large.
+
+    Note:
+        Only affects file-based storage, not database records
+    """
     log_data = load_sent_emails_log()
-    cutoff_date = (datetime.now().date() - timedelta(days=30)).isoformat()
-    
+    cutoff_date = (
+        datetime.now().date() - timedelta(days=30)
+    ).isoformat()
+
     # Remove entries older than 30 days
-    keys_to_remove = [date for date in log_data.keys() if date < cutoff_date]
+    keys_to_remove = [
+        date for date in log_data.keys() if date < cutoff_date
+    ]
     for key in keys_to_remove:
         del log_data[key]
-    
+
     if keys_to_remove:
         save_sent_emails_log(log_data)
 
@@ -176,39 +319,87 @@ def cleanup_old_logs():
 
 app = Flask(__name__)
 
+
 class LarkClient:
-    def __init__(self):
+    """
+    Client for interacting with Lark/Feishu Base API.
+
+    Handles authentication, data fetching, and caching for employee data
+    from Lark Base. Implements 2-minute data cache for performance.
+
+    Attributes:
+        app_id: Lark application ID
+        app_secret: Lark application secret
+        app_token: Base application token
+        table_id: Table ID within the Base
+        view_id: Optional view ID for filtering
+        cached_data: Cached employee data
+        cache_time: Timestamp of last cache update
+        cache_duration: Cache duration in seconds (default 120)
+    """
+
+    def __init__(self) -> None:
+        """
+        Initialize LarkClient with environment configuration.
+
+        Raises:
+            Exception: If LARK_APP_ID or LARK_APP_SECRET not configured
+        """
         self.app_id = os.getenv('LARK_APP_ID')
         self.app_secret = os.getenv('LARK_APP_SECRET')
-        
+
         if not self.app_id or not self.app_secret:
             raise Exception("LARK_APP_ID and LARK_APP_SECRET are required")
-        
+
         # Store configuration for Base
         self.app_token = os.getenv('LARK_BASE_APP_TOKEN')
         self.table_id = os.getenv('LARK_BASE_TABLE_ID')
         self.view_id = os.getenv('LARK_BASE_VIEW_ID', '')
-        self.use_user_token = os.getenv('LARK_USE_USER_TOKEN', 'false').lower() == 'true'
-        
+        self.use_user_token = (
+            os.getenv('LARK_USE_USER_TOKEN', 'false').lower() == 'true'
+        )
+
         # Initialize access token cache
-        self.access_token = None
-        self.token_expires = None
+        self.access_token: Optional[str] = None
+        self.token_expires: Optional[datetime] = None
+
+        # Data cache - cache for 2 minutes
+        self.cached_data: Optional[List[List[Any]]] = None
+        self.cache_time: Optional[float] = None
+        self.cache_duration: int = 120  # seconds
     
-    def get_access_token(self):
-        """Get tenant access token for Base API"""
+    def get_access_token(self) -> str:
+        """
+        Get tenant access token for Base API.
+
+        Returns:
+            Access token string for API authentication
+
+        Raises:
+            Exception: If token cannot be obtained or user token not set
+        """
         # If user token is configured, use it
         if self.use_user_token:
             user_token = os.getenv('LARK_USER_ACCESS_TOKEN')
             if user_token and user_token.strip() and user_token != '.':
                 return user_token
             else:
-                raise Exception("LARK_USER_ACCESS_TOKEN is required when LARK_USE_USER_TOKEN is true")
-        
+                raise Exception(
+                    "LARK_USER_ACCESS_TOKEN is required when "
+                    "LARK_USE_USER_TOKEN is true"
+                )
+
         # Always refresh tenant token to avoid invalid token errors
         # Use the new get_tenant_access_token function
         try:
-            self.access_token = get_tenant_access_token(self.app_id, self.app_secret)
-            self.token_expires = datetime.now() + timedelta(seconds=7200 - 300)  # 2 hours minus 5 minutes buffer
+            self.access_token = get_tenant_access_token(
+                self.app_id,
+                self.app_secret
+            )
+            # 2 hours minus 5 minutes buffer
+            self.token_expires = (
+                datetime.now() + timedelta(seconds=7200 - 300)
+            )
             return self.access_token
         except FeishuError as e:
             raise Exception(f"Failed to get access token: {e}")
@@ -225,13 +416,13 @@ class LarkClient:
         
         # Add header row matching field_mappings order - KEEP COMPATIBILITY
         header_row = [
-            "Employee Name", "Leader Name", "Contract Renewal Date", "Probation Period End Date", 
-            "Employee Status", "Position", "Leader Email", "Leader CRM", "Department", "Employee CRM", 
-            "Probation Remaining Days", "Contract Remaining Days", "Contract Company", "PSID", 
-            "Big Team", "Small Team", "Marital Status", "Religion", "Joining Date", "2nd Contract Renewal",
-            "Gender", "Nationality", "Birthday", "Age", "University", "Educational Level", 
-            "School Ranking", "Major", "Exit Date", "Exit Type", "Exit Reason", "Work Email address", 
-            "contract type", "service year", "Work Site"
+            "Employee Name", "Leader Name", "Contract Renewal Date", "Probation Period End Date",
+            "Employee Status", "Position", "Leader Email", "Leader CRM", "Department", "2+Leader Email",
+            "Employee CRM", "Probation Remaining Days", "Contract Remaining Days", "Contract Company",
+            "PSID", "Big Team", "Small Team", "Marital Status", "Religion", "Joining Date",
+            "2nd Contract Renewal", "Gender", "Nationality", "Birthday", "Age", "University",
+            "Educational Level", "School Ranking", "Major", "Exit Date", "Exit Type", "Exit Reason",
+            "Work Email address", "contract type", "service year", "Work Site", "ID N. Front"
         ]
         extracted_data.append(header_row)
         
@@ -355,7 +546,8 @@ class LarkClient:
                         ('Work Email address', ['Work Email address']),  # Position 32
                         ('contract type', ['contract type']),  # Position 33
                         ('service year', ['service year']),  # Position 34
-                        ('Work Site', ['Work Site'])  # Position 35
+                        ('Work Site', ['Work Site']),  # Position 35
+                        ('ID N. Front', ['ID N. Front'])  # Position 36
                     ]
                     
                     extracted_row = []
@@ -387,138 +579,99 @@ class LarkClient:
         return extracted_data
 
     
-    def get_data(self):
-        """Get data from Lark Base"""
+    def get_data(self, force_refresh=False):
+        """Get data from Lark Base with caching"""
+        # Check if cache is still valid
+        if not force_refresh and self.cached_data is not None and self.cache_time is not None:
+            time_since_cache = time.time() - self.cache_time
+            if time_since_cache < self.cache_duration:
+                print(f"📦 Using cached data ({int(self.cache_duration - time_since_cache)}s remaining)")
+                return self.cached_data
+
+        # Fetch fresh data
         data = self.get_base_data()
-        
+
+        # Update cache
+        self.cached_data = data
+        self.cache_time = time.time()
+
         return data
 
-def get_random_email_config():
-    """Get a random email configuration from the available sender emails."""
-    sender_emails_env = os.getenv('SENDER_EMAILS', os.getenv('SENDER_EMAIL'))
-    sender_emails = [email.strip() for email in sender_emails_env.split(',')]
+def get_random_email_config() -> Dict[str, str]:
+    """
+    Get email configuration from environment variables.
 
-    usernames_env = os.getenv('EMAIL_USERNAMES', os.getenv('EMAIL_USERNAME'))
-    email_usernames = [username.strip() for username in usernames_env.split(',')]
+    Uses first email account for SMTP authentication while showing
+    all HR emails in the From field for visibility.
 
-    passwords_env = os.getenv('EMAIL_PASSWORDS', os.getenv('EMAIL_PASSWORD'))
-    email_passwords = [password.strip() for password in passwords_env.split(',')]
+    Returns:
+        Dictionary containing:
+            - sender_email: Comma-separated list of all sender emails
+            - auth_email: Email to use for SMTP authentication
+            - username: SMTP username
+            - password: SMTP password
 
-    # Use first email account to authenticate (usually the most reliable one)
+    Note:
+        Configured via SENDER_EMAILS, EMAIL_USERNAMES, EMAIL_PASSWORDS
+        environment variables
+    """
+    sender_emails_env = os.getenv(
+        'SENDER_EMAILS',
+        os.getenv('SENDER_EMAIL')
+    )
+    sender_emails = [
+        email.strip() for email in sender_emails_env.split(',')
+    ]
+
+    usernames_env = os.getenv(
+        'EMAIL_USERNAMES',
+        os.getenv('EMAIL_USERNAME')
+    )
+    email_usernames = [
+        username.strip() for username in usernames_env.split(',')
+    ]
+
+    passwords_env = os.getenv(
+        'EMAIL_PASSWORDS',
+        os.getenv('EMAIL_PASSWORD')
+    )
+    email_passwords = [
+        password.strip() for password in passwords_env.split(',')
+    ]
+
+    # Use first email account to authenticate (most reliable)
     # But show all HR emails in the "From" field
-    index = 0  # Use first account (sarakhateeb@51talk.com) for authentication
+    index = 0
 
     return {
-        'sender_email': ', '.join(sender_emails),  # Show all 3 emails in From field
-        'auth_email': sender_emails[index],  # Email to use for SMTP authentication
+        'sender_email': ', '.join(sender_emails),
+        'auth_email': sender_emails[index],
         'username': email_usernames[index],
         'password': email_passwords[index]
     }
 
-def send_reminder_email(
-    employee_name,
-    leader_name,
-    leader_email,
-    evaluation_link,
-    days_remaining,
-    evaluation_type,
-    crm_account=""
-):
-    """Send evaluation reminder email to leader."""
-    try:
-        print(f"Attempting to send email to {leader_email} for {employee_name}")
 
-        # Get email configuration (shows all 3 HR emails in From field)
-        email_config = get_random_email_config()
-        print(f"Using sender emails: {email_config['sender_email']}")
-        
-        context = ssl.create_default_context()
-        context.check_hostname = False
-        context.verify_mode = ssl.CERT_NONE
-        
-        smtp_server = os.getenv('SMTP_SERVER')
-        smtp_port = int(os.getenv('SMTP_PORT', 465))
-        
-        with smtplib.SMTP_SSL(smtp_server, smtp_port, context=context) as server:
-            server.login(email_config['username'], email_config['password'])
+def get_department_cc_emails(
+    employees_data: List[Dict[str, Any]]
+) -> List[str]:
+    """
+    Get CC emails based on department mapping.
 
-            message = MIMEMultipart()
-            subject = f"Urgent: Employee Evaluation Required - {employee_name}"
-            message["Subject"] = subject
-            message["From"] = email_config['sender_email']  # Shows all 3 HR emails
-            message["To"] = leader_email
-            
-            # Professional email body with HTML formatting for clickable links
-            html_body = f"""
-<html>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #2c5aa0; border-bottom: 2px solid #2c5aa0; 
-                   padding-bottom: 10px;">
-            Employee Evaluation Required
-        </h2>
-        
-        <p>Dear <strong>{leader_name}</strong>,</p>
-        
-        <p>This is an urgent reminder that <strong>{employee_name}'s</strong>
-           evaluation must be completed within <strong style="color: #dc3545;">{days_remaining} days</strong>.</p>
+    Args:
+        employees_data: List of employee dictionaries containing
+                       department information
 
-        <div style="background-color: #f8f9fa; padding: 15px;
-                    border-left: 4px solid #2c5aa0; margin: 20px 0;">
-            <h3 style="margin-top: 0; color: #2c5aa0;">Employee Details:</h3>
-            <ul style="margin: 10px 0;">
-                <li><strong>Name:</strong> {employee_name}</li>
-                <li><strong>CRM Account:</strong> {crm_account}</li>
-                <li><strong>Evaluation Type:</strong> {evaluation_type}</li>
-                <li><strong>Evaluation Deadline:</strong>
-                    <span style="color: #dc3545; font-weight: bold;">
-                        {days_remaining} days remaining
-                    </span>
-                </li>
-            </ul>
-        </div>
-        
-        <div style="text-align: center; margin: 30px 0;">
-            <a href="{evaluation_link}" 
-               style="background-color: #2c5aa0; color: white; 
-                      padding: 15px 30px; text-decoration: none; 
-                      border-radius: 5px; font-weight: bold; 
-                      display: inline-block; font-size: 16px;"
-               target="_blank">
-                📋 Complete Evaluation Form
-            </a>
-        </div>
-        
-        <p style="background-color: #fff3cd; padding: 10px; 
-                  border: 1px solid #ffeaa7; border-radius: 4px;">
-            <strong>⚠️ Important:</strong> Please complete this evaluation 
-            before the deadline to ensure proper HR compliance.
-        </p>
-        
-        <p>Thank you for your prompt attention to this matter.</p>
-        
-        <div style="margin-top: 30px; border-top: 1px solid #eee; 
-                    padding-top: 15px; color: #666;">
-            <p><strong>Best regards,</strong><br>
-            HR Team<br>
-            51Talk</p>
-        </div>
-    </div>
-</body>
-</html>
-            """
-            
-            message.attach(MIMEText(html_body, "html"))
-            server.send_message(message)
-            print(f"Email sent successfully to {leader_email}")
-            return True
-            
-    except Exception as e:
-        print(f"Failed to send email to {leader_email}: {str(e)}")
-        return False
+    Returns:
+        List of unique CC email addresses
 
-def get_department_cc_emails(employees_data):
-    """Get CC emails based on department mapping."""
+    Note:
+        Always includes lijie14@51talk.com and department-specific
+        emails based on mapping:
+        - CC/GCC: wuchuan@51talk.com
+        - ACC: shichuan001@51talk.com
+        - EA: guanshuhao001@51talk.com, nikiyang@51talk.com
+        - CM: wangjingjing@51talk.com, nikiyang@51talk.com
+    """
     # Department-based CC mapping
     department_cc_mapping = {
         'CC': ['wuchuan@51talk.com'],
@@ -527,29 +680,61 @@ def get_department_cc_emails(employees_data):
         'EA': ['guanshuhao001@51talk.com', 'nikiyang@51talk.com'],
         'CM': ['wangjingjing@51talk.com', 'nikiyang@51talk.com']
     }
-    
+
     # Always include constant CC
     constant_cc = ['lijie14@51talk.com']
-    
+
     # Collect all CC emails based on departments in this group
-    cc_emails = set(constant_cc)  # Start with constant CC
-    
+    cc_emails: Set[str] = set(constant_cc)
+
     for emp in employees_data:
         department = emp.get('department', '').strip().upper()
         if department in department_cc_mapping:
             cc_emails.update(department_cc_mapping[department])
-    
+
     return list(cc_emails)
 
 def send_grouped_reminder_email(
-    leader_name,
-    leader_email,
-    employees_data,
-    evaluation_type,
-    additional_cc_emails=None,
-    second_leader_email=None
-):
-    """Send one email to a leader with multiple employees listed."""
+    leader_name: str,
+    leader_email: str,
+    employees_data: List[Dict[str, Any]],
+    evaluation_type: str,
+    additional_cc_emails: Optional[str] = None,
+    second_leader_email: Optional[str] = None
+) -> bool:
+    """
+    Send grouped reminder email to leader for multiple employees.
+
+    Sends a single email containing information about all employees
+    under a leader who need evaluations. Emails are grouped by leader,
+    evaluation type, and department.
+
+    Args:
+        leader_name: Name of the team leader
+        leader_email: Email address of the team leader
+        employees_data: List of employee dictionaries containing:
+            - name: Employee name
+            - department: Department name
+            - position: Job position
+            - employee_crm: Employee CRM ID
+            - deadline_date: Evaluation deadline (YYYY-MM-DD)
+            - contract_end_date: Contract/probation end date
+            - days_remaining: Days until deadline
+            - leader_crm: Leader CRM ID
+        evaluation_type: Type of evaluation (Probation Period
+                        Evaluation/Contract Renewal Evaluation)
+        additional_cc_emails: Optional comma-separated CC emails
+        second_leader_email: Optional secondary leader email (2+Leader)
+
+    Returns:
+        True if email sent successfully, False otherwise
+
+    Note:
+        - Uses SMTP configuration from environment variables
+        - Includes department-based CC emails automatically
+        - Always includes lijie14@51talk.com in CC
+        - Uses SSL for secure connection
+    """
     try:
         employee_count = len(employees_data)
 
@@ -698,22 +883,63 @@ def send_grouped_reminder_email(
         print(f"Failed to send grouped email to {leader_email}: {str(e)}")
         return False
 
-def extract_email(email_data):
-    """Extract email from various data formats - captures ALL data including '0' values"""
+def extract_email(email_data: Any) -> str:
+    """
+    Extract email from various data formats.
+
+    Handles multiple data formats from Lark Base API including lists,
+    dictionaries, and strings. Captures all data including '0' values.
+
+    Args:
+        email_data: Email data in various formats (list, dict, str, or None)
+
+    Returns:
+        Extracted email string, or empty string if no valid email found
+
+    Example:
+        >>> extract_email([{'text': 'user@example.com'}])
+        'user@example.com'
+        >>> extract_email('user@example.com')
+        'user@example.com'
+        >>> extract_email(['user@example.com'])
+        'user@example.com'
+    """
     if isinstance(email_data, list) and len(email_data) > 0:
         email_item = email_data[0]
         if isinstance(email_item, dict) and 'text' in email_item:
-            return str(email_item['text']).strip() if email_item['text'] is not None else ""
+            return (
+                str(email_item['text']).strip()
+                if email_item['text'] is not None else ""
+            )
         else:
-            return str(email_item).strip() if email_item is not None else ""
+            return (
+                str(email_item).strip()
+                if email_item is not None else ""
+            )
     elif isinstance(email_data, str):
         return email_data.strip()
     elif email_data is not None:
         return str(email_data).strip()
     return ""
 
-def is_valid_email_for_sending(email):
-    """Check if email is valid for sending (not '0', empty, or invalid)"""
+
+def is_valid_email_for_sending(email: str) -> bool:
+    """
+    Check if email is valid for sending.
+
+    Validates email format and filters out placeholder values
+    like '0', 'null', 'n/a', etc.
+
+    Args:
+        email: Email address to validate
+
+    Returns:
+        True if email is valid for sending, False otherwise
+
+    Note:
+        Invalid values include: '0', 'null', 'none', 'n/a', '-', 'na'
+        and any string without '@' and '.'
+    """
     if not email or email.strip() == "":
         return False
     email = email.strip()
@@ -728,17 +954,45 @@ def is_valid_email_for_sending(email):
 
 # Removed extract_evaluation_link function - now using static links
 
-def excel_date_to_python(excel_date):
+
+def excel_date_to_python(excel_date: Any) -> Optional[datetime]:
+    """
+    Convert Excel date number to Python datetime object.
+
+    Args:
+        excel_date: Excel date as integer or float
+
+    Returns:
+        Python datetime object, or None if not a valid Excel date
+
+    Note:
+        Excel epoch is 1900-01-01, but Excel incorrectly treats
+        1900 as a leap year, so we use 1899-12-30 as epoch
+    """
     if isinstance(excel_date, (int, float)):
-        # Excel epoch is 1900-01-01, but Excel incorrectly treats 1900 as a leap year
+        # Excel epoch is 1900-01-01, but Excel incorrectly
+        # treats 1900 as a leap year
         epoch = datetime(1899, 12, 30)
         return epoch + timedelta(days=excel_date)
     return None
 
-def format_date_for_display(date_value):
+
+def format_date_for_display(date_value: Any) -> str:
+    """
+    Format date value for display.
+
+    Args:
+        date_value: Date value (Excel date number, string, or None)
+
+    Returns:
+        Formatted date string (YYYY-MM-DD) or '-' if no valid date
+    """
     if isinstance(date_value, (int, float)):
         date_obj = excel_date_to_python(date_value)
-        return date_obj.strftime('%Y-%m-%d') if date_obj else str(date_value)
+        return (
+            date_obj.strftime('%Y-%m-%d')
+            if date_obj else str(date_value)
+        )
     return str(date_value) if date_value else '-'
 
 def check_and_send_reminders(employees_data, additional_cc_emails=None):
@@ -908,8 +1162,18 @@ def check_and_send_reminders(employees_data, additional_cc_emails=None):
 lark_client = LarkClient()
 
 # Initialize database and cleanup old logs on startup
-def initialize_app():
-    """Initialize the application with database setup"""
+def initialize_app() -> None:
+    """
+    Initialize the application with database setup.
+
+    Attempts to initialize PostgreSQL database if DATABASE_URL is
+    configured. Falls back to file-based storage if database is
+    not available.
+
+    Note:
+        Called automatically on application startup
+        Performs cleanup of old email logs (30+ days)
+    """
     try:
         # Try to initialize database if DATABASE_URL is available
         database_url = os.getenv('DATABASE_URL')
@@ -919,10 +1183,16 @@ def initialize_app():
             cleanup_old_email_logs_db()
             print("✅ Database initialized successfully")
         else:
-            print("📝 Using file-based storage (DATABASE_URL not configured)")
+            print(
+                "📝 Using file-based storage "
+                "(DATABASE_URL not configured)"
+            )
             cleanup_old_logs()
     except Exception as e:
-        print(f"⚠️  Database initialization failed, using file-based storage: {e}")
+        print(
+            f"⚠️  Database initialization failed, "
+            f"using file-based storage: {e}"
+        )
         cleanup_old_logs()
 
 # Initialize on startup
@@ -1279,43 +1549,113 @@ def preview_reminders():
         return jsonify({"success": False, "error": str(e)}), 500
 
 # Helper function to convert timestamps to readable dates
-def convert_timestamp_to_date(timestamp):
-    """Convert timestamp to readable date format"""
+def convert_timestamp_to_date(timestamp: Any) -> str:
+    """
+    Convert timestamp to readable date format.
+
+    Args:
+        timestamp: Timestamp value (int, float, or string)
+
+    Returns:
+        Formatted date string (YYYY-MM-DD) or 'Not specified'
+        if timestamp is empty or invalid
+
+    Note:
+        Handles both seconds and milliseconds timestamps
+        (converts milliseconds to seconds automatically)
+    """
     if not timestamp or timestamp == '':
         return 'Not specified'
-    
+
     try:
         # Convert string timestamp to int
         timestamp_int = int(float(str(timestamp)))
         # Convert milliseconds to seconds if needed
-        if timestamp_int > 9999999999:  # More than 10 digits means milliseconds
+        # More than 10 digits means milliseconds
+        if timestamp_int > 9999999999:
             timestamp_int = timestamp_int // 1000
-        
+
         date_obj = datetime.fromtimestamp(timestamp_int)
         return date_obj.strftime('%Y-%m-%d')
     except:
         return str(timestamp)
 
+
 # Vendor notification functionality
-def get_vendor_email(contract_company):
-    """Get vendor email based on contract company name"""
+def get_vendor_email(
+    contract_company: Optional[str]
+) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Get vendor email and name based on contract company.
+
+    Args:
+        contract_company: Contract company name from employee data
+
+    Returns:
+        Tuple of (vendor_email, vendor_name)
+        Returns (None, None) if contract_company is None
+
+    Note:
+        Current mappings:
+        - Dummah/ضمة للاستشارات -> alsaidirehab@51talk.com
+        - Migrate Business Services -> alsaidirehab@51talk.com
+        - Helloworld Online Education -> No action needed (None)
+        - Unknown company -> None
+    """
     if not contract_company:
         return None, None
 
     company_lower = str(contract_company).lower()
 
-    # Both Dummah and Migrate Business Services send to alsaidirehab@51talk.com
+    # Both Dummah and Migrate Business Services send to alsaidirehab
     if 'ضمة للاستشارات' in company_lower or 'dummah' in company_lower:
-        return 'alsaidirehab@51talk.com', 'شركة ضمة للاستشارات ذات مسؤولية محدودة'
+        return (
+            'alsaidirehab@51talk.com',
+            'شركة ضمة للاستشارات ذات مسؤولية محدودة'
+        )
     elif 'migrate business services' in company_lower:
-        return 'alsaidirehab@51talk.com', 'Migrate Business Services Co.'
+        return (
+            'alsaidirehab@51talk.com',
+            'Migrate Business Services Co.'
+        )
     elif 'helloworld online education jordan llc' in company_lower:
-        return None, 'Helloworld Online Education Jordan LLC'  # No action needed
+        # No action needed
+        return None, 'Helloworld Online Education Jordan LLC'
     else:
         return None, f'Unknown Vendor (Company: {contract_company})'
 
-def send_vendor_notification_grouped(employees_data, vendor_email, vendor_name):
-    """Send vendor notification email for multiple separated employees grouped by company"""
+def send_vendor_notification_grouped(
+    employees_data: List[Dict[str, Any]],
+    vendor_email: str,
+    vendor_name: str
+) -> Tuple[bool, str]:
+    """
+    Send vendor notification email for separated employees.
+
+    Sends a single email to vendor containing all separated employees
+    from that company, grouped by contract company.
+
+    Args:
+        employees_data: List of employee dictionaries containing:
+            - name: Employee name
+            - national_id: National ID (ID N. Front)
+            - exit_date: Exit date (YYYY-MM-DD)
+            - exit_type: Exit type (Forced/Voluntary)
+            - exit_reason: Exit reason (additional details)
+        vendor_email: Vendor email address
+        vendor_name: Vendor company name
+
+    Returns:
+        Tuple of (success, message):
+            - success: True if email sent successfully, False otherwise
+            - message: Success or error message
+
+    Note:
+        - Includes CC to lijie14@51talk.com (HR)
+        - Uses same SMTP configuration as reminder emails
+        - Email contains table with: employee name, national ID,
+          exit date, exit type (Forced/Voluntary)
+    """
     if not vendor_email:
         return False, "No email configured for this vendor"
     
@@ -1335,18 +1675,21 @@ def send_vendor_notification_grouped(employees_data, vendor_email, vendor_name):
         message = MIMEMultipart("alternative")
         message["From"] = smtp_config['sender_email']
         message["To"] = vendor_email
+        message["Cc"] = "lijie14@51talk.com"
         message["Subject"] = f"Employee Separation Notification - {len(employees_data)} Employee(s)"
         
         # Create professional HTML content with table
         # Use all employees passed to this function (already filtered by date)
 
-        # Create table rows with employee names and exit dates
+        # Create table rows with employee names, exit dates, exit type, and national ID
         table_rows = ""
         for emp in employees_data:
             table_rows += f"""
                 <tr>
                     <td style="padding: 12px; border: 1px solid #ddd;">{emp['name']}</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">{emp.get('national_id', '-')}</td>
                     <td style="padding: 12px; border: 1px solid #ddd;">{emp.get('exit_date', 'Not specified')}</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">{emp.get('exit_type', '-')}</td>
                 </tr>"""
 
         html_content = f"""
@@ -1356,7 +1699,7 @@ def send_vendor_notification_grouped(employees_data, vendor_email, vendor_name):
             <meta charset="utf-8">
             <style>
                 body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f8f9fa; }}
-                .container {{ max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+                .container {{ max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
                 .header {{ text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #007bff; }}
                 .title {{ color: #007bff; font-size: 24px; font-weight: bold; margin-bottom: 10px; }}
                 .company-name {{ color: #333; font-size: 18px; margin-bottom: 20px; }}
@@ -1382,7 +1725,9 @@ def send_vendor_notification_grouped(employees_data, vendor_email, vendor_name):
                     <thead>
                         <tr style="background-color: #007bff;">
                             <th style="padding: 12px; border: 1px solid #ddd; text-align: left; color: white;">Employee Name</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; color: white;">National ID</th>
                             <th style="padding: 12px; border: 1px solid #ddd; text-align: left; color: white;">Exit Date</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; color: white;">Exit Type</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1516,12 +1861,14 @@ def check_separated_employees():
             # Map to NEW column positions after reordering
             employee_name = employee[0] if len(employee) > 0 else None  # Employee Name - Position 0
             employee_status = employee[4] if len(employee) > 4 else None  # Employee Status - Position 4
-            exit_date = employee[29] if len(employee) > 29 else None  # Exit Date - Position 29 (FIXED)
-            exit_reason = employee[31] if len(employee) > 31 else None  # Exit Reason - Position 31 (FIXED)
-            contract_company = employee[13] if len(employee) > 13 else None  # Contract Company - Position 13 (FIXED)
-            crm = employee[10] if len(employee) > 10 else None  # Employee CRM - Position 10 (FIXED)
+            exit_date = employee[29] if len(employee) > 29 else None  # Exit Date - Position 29
+            exit_type = employee[30] if len(employee) > 30 else None  # Exit Type - Position 30 (Forced/Voluntary)
+            exit_reason = employee[31] if len(employee) > 31 else None  # Exit Reason - Position 31
+            contract_company = employee[13] if len(employee) > 13 else None  # Contract Company - Position 13
+            crm = employee[10] if len(employee) > 10 else None  # Employee CRM - Position 10
             department = employee[8] if len(employee) > 8 else None  # Department - Position 8
             position = employee[5] if len(employee) > 5 else None  # Position - Position 5
+            national_id = employee[36] if len(employee) > 36 else None  # ID N. Front - Position 36
 
             if not employee_name or not str(employee_name).strip():
                 continue
@@ -1569,14 +1916,16 @@ def check_separated_employees():
                     'name': employee_name,
                     'department': department or '-',
                     'crm': crm or '-',
+                    'exit_type': exit_type or '-',
                     'exit_reason': exit_reason or '-',
                     'exit_date': exit_date_formatted,
                     'vendor_email': vendor_email if vendor_email else 'No action needed',
                     'vendor_name': vendor_name,
                     'position': position or '-',
-                    'contract_company': contract_company or 'N/A'
+                    'contract_company': contract_company or 'N/A',
+                    'national_id': national_id or '-'
                 })
-        
+
         return jsonify({
             'success': True,
             'separated_employees': separated_employees,
@@ -1613,11 +1962,13 @@ def send_vendor_notifications():
             employee_name = employee[0] if len(employee) > 0 else None
             employee_status = employee[4] if len(employee) > 4 else None
             exit_date = employee[29] if len(employee) > 29 else None
+            exit_type = employee[30] if len(employee) > 30 else None  # Exit Type - Position 30 (Forced/Voluntary)
             exit_reason = employee[31] if len(employee) > 31 else None
             contract_company = employee[13] if len(employee) > 13 else None
             crm = employee[10] if len(employee) > 10 else None
             department = employee[8] if len(employee) > 8 else None
             position = employee[5] if len(employee) > 5 else None
+            national_id = employee[36] if len(employee) > 36 else None  # ID N. Front - Position 36
 
             if not employee_name or not str(employee_name).strip():
                 continue
@@ -1661,14 +2012,16 @@ def send_vendor_notifications():
                     'name': employee_name,
                     'department': department or '-',
                     'crm': crm or '-',
+                    'exit_type': exit_type or '-',
                     'exit_reason': exit_reason or '-',
                     'exit_date': exit_date_formatted,
                     'vendor_email': vendor_email if vendor_email else 'No action needed',
                     'vendor_name': vendor_name,
                     'position': position or '-',
-                    'contract_company': contract_company or 'N/A'
+                    'contract_company': contract_company or 'N/A',
+                    'national_id': national_id or '-'
                 })
-        
+
         # Group employees by vendor email and vendor name
         vendor_groups = {}
         for employee in separated_employees:

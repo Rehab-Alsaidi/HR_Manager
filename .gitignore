@@ -83,3 +83,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Local email tracking (use database in production)
+sent_emails_log.json
