@@ -12,7 +12,7 @@ import random
 import smtplib
 import ssl
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
@@ -495,8 +495,8 @@ class LarkClient:
                         # Handle timestamp directly if it's a number
                         if isinstance(field_value, (int, float)) and field_value > 1000000000:
                             try:
-                                # Handle timestamp (milliseconds)
-                                date_obj = datetime.fromtimestamp(field_value / 1000, tz=timezone.utc)
+                                # Handle timestamp (milliseconds) - use local timezone
+                                date_obj = datetime.fromtimestamp(field_value / 1000, tz=LOCAL_TIMEZONE)
                                 return date_obj.strftime('%Y-%m-%d')
                             except:
                                 return ""
@@ -508,8 +508,8 @@ class LarkClient:
                                 date_str = str(date_str).strip()
                                 # Base returns dates as timestamps or YYYY-MM-DD
                                 if date_str.isdigit() and len(date_str) > 8:
-                                    # Handle timestamp (milliseconds)
-                                    date_obj = datetime.fromtimestamp(int(date_str) / 1000, tz=timezone.utc)
+                                    # Handle timestamp (milliseconds) - use local timezone
+                                    date_obj = datetime.fromtimestamp(int(date_str) / 1000, tz=LOCAL_TIMEZONE)
                                     return date_obj.strftime('%Y-%m-%d')
                                 elif 'T' in date_str:
                                     # Handle ISO format
@@ -1616,10 +1616,10 @@ def convert_timestamp_to_date(timestamp: Any) -> str:
         if timestamp_int > 9999999999:
             timestamp_int = timestamp_int // 1000
 
-        # Use local timezone instead of UTC to avoid day offset issues
-        date_obj = datetime.fromtimestamp(timestamp_int)
+        # Use configured local timezone instead of UTC to avoid day offset issues
+        date_obj = datetime.fromtimestamp(timestamp_int, tz=LOCAL_TIMEZONE)
         formatted_date = date_obj.strftime('%Y-%m-%d')
-        print(f"🕐 Timestamp conversion: {timestamp} → {timestamp_int} → {formatted_date}")
+        print(f"🕐 Timestamp conversion: {timestamp} → {timestamp_int} → {formatted_date} ({LOCAL_TIMEZONE})")
         return formatted_date
     except Exception as e:
         print(f"❌ Failed to convert timestamp {timestamp}: {str(e)}")
