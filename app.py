@@ -1842,8 +1842,12 @@ def send_vendor_notification_grouped(
                     # Show the filename if available with a checkmark and note about attachment
                     if 'name' in attachment_obj:
                         attachment_filename = attachment_obj['name']
-                        # Make the attachment clickable with a link that references the attachment
-                        separation_display = f'✓ <a href="cid:{attachment_filename}" style="color: #007bff; text-decoration: none; font-weight: 600;">{attachment_filename}</a> <span style="color: #28a745; font-size: 0.9em;">(See Attachments)</span>'
+                        # Generate Content-ID that matches what we'll use in the attachment
+                        safe_emp_name = emp['name'].replace(' ', '_')
+                        full_attachment_name = f"{safe_emp_name}_{attachment_filename}"
+                        content_id = full_attachment_name.replace(' ', '_').replace('.', '_')
+                        # Make the attachment clickable with a link that references the Content-ID
+                        separation_display = f'✓ <a href="cid:{content_id}" style="color: #007bff; text-decoration: underline; font-weight: 600;">{attachment_filename}</a>'
                     else:
                         separation_display = "✓ Attached (See Attachments)"
                 except (json.JSONDecodeError, TypeError):
@@ -1968,8 +1972,10 @@ def send_vendor_notification_grouped(
                     if file_data:
                         file_content, filename = file_data
 
-                        # Create attachment as regular email attachment
-                        part = MIMEBase('application', 'octet-stream')
+                        # Create attachment with proper MIME type
+                        # Use application/pdf for PDF files, otherwise octet-stream
+                        mime_type = 'application/pdf' if filename.lower().endswith('.pdf') else 'application/octet-stream'
+                        part = MIMEBase('application', mime_type.split('/')[-1])
                         part.set_payload(file_content)
                         encoders.encode_base64(part)
 
@@ -1977,14 +1983,19 @@ def send_vendor_notification_grouped(
                         safe_emp_name = emp['name'].replace(' ', '_')
                         attachment_name = f"{safe_emp_name}_{filename}"
 
+                        # Add Content-Disposition header for attachment
                         part.add_header(
                             'Content-Disposition',
                             f'attachment; filename="{attachment_name}"'
                         )
 
+                        # Add Content-ID for inline linking (make it clickable in email)
+                        content_id = f"{safe_emp_name}_{filename}".replace(' ', '_').replace('.', '_')
+                        part.add_header('Content-ID', f'<{content_id}>')
+
                         message.attach(part)
                         attachments_count += 1
-                        print(f"    ✅ Attached: {attachment_name} (Total attachments: {attachments_count})")
+                        print(f"    ✅ Attached: {attachment_name} with CID: {content_id} (Total attachments: {attachments_count})")
                     else:
                         print(f"    ⚠️  Could not download separation papers")
                 else:
