@@ -19,6 +19,7 @@ from email.mime.base import MIMEBase
 from email import encoders
 from functools import lru_cache
 from typing import Any, Dict, List, Optional, Set, Tuple
+from zoneinfo import ZoneInfo
 
 import requests
 from dotenv import load_dotenv
@@ -36,6 +37,18 @@ load_dotenv()
 
 # Feishu API Base Configuration
 BASE = "https://open.feishu.cn/open-apis"
+
+# Timezone configuration - Set to your local timezone (default: Jordan/UTC+3)
+# You can override this by setting TZ environment variable (e.g., TZ="Asia/Amman")
+LOCAL_TIMEZONE = ZoneInfo(os.getenv("TZ", "Asia/Amman"))
+
+def get_local_now():
+    """Get current datetime in the configured local timezone."""
+    return datetime.now(LOCAL_TIMEZONE)
+
+def get_local_today():
+    """Get current date in the configured local timezone."""
+    return get_local_now().date()
 
 
 class FeishuError(Exception):
@@ -234,7 +247,7 @@ def is_email_already_sent_today(
 
     # Fallback to file-based storage
     log_data = load_sent_emails_log()
-    today = datetime.now(timezone.utc).date().isoformat()
+    today = get_local_today().isoformat()
 
     # Create unique key for this employee-leader-evaluation combination
     key = f"{employee_name}|{leader_email}|{evaluation_type}"
@@ -271,7 +284,7 @@ def mark_email_as_sent(
 
     # Fallback to file-based storage
     log_data = load_sent_emails_log()
-    today = datetime.now(timezone.utc).date().isoformat()
+    today = get_local_today().isoformat()
 
     if today not in log_data:
         log_data[today] = {}
@@ -279,7 +292,7 @@ def mark_email_as_sent(
     # Create unique key for this employee-leader-evaluation combination
     key = f"{employee_name}|{leader_email}|{evaluation_type}"
     log_data[today][key] = {
-        "sent_at": datetime.now(timezone.utc).isoformat(),
+        "sent_at": get_local_now().isoformat(),
         "employee_name": employee_name,
         "leader_email": leader_email,
         "evaluation_type": evaluation_type
@@ -297,7 +310,7 @@ def cleanup_old_logs() -> None:
     """
     log_data = load_sent_emails_log()
     cutoff_date = (
-        datetime.now(timezone.utc).date() - timedelta(days=30)
+        get_local_today() - timedelta(days=30)
     ).isoformat()
 
     # Remove entries older than 30 days
@@ -400,7 +413,7 @@ class LarkClient:
             )
             # 2 hours minus 5 minutes buffer
             self.token_expires = (
-                datetime.now(timezone.utc) + timedelta(seconds=7200 - 300)
+                get_local_now() + timedelta(seconds=7200 - 300)
             )
             return self.access_token
         except FeishuError as e:
@@ -1025,7 +1038,7 @@ def format_date_for_display(date_value: Any) -> str:
 
 def check_and_send_reminders(employees_data, additional_cc_emails=None):
     sent_reminders = []
-    today = datetime.now(timezone.utc).date()
+    today = get_local_today()
     
     # Group employees by leader email and evaluation type
     leader_groups = {}
@@ -1236,7 +1249,7 @@ def vendor_notifications():
 def todays_reminders():
     try:
         data = lark_client.get_data()
-        today = datetime.now(timezone.utc).date()
+        today = get_local_today()
         
         # Group employees by leader email and evaluation type
         # Include both: pending reminders AND emails sent today
@@ -1448,7 +1461,7 @@ def preview_reminders():
     try:
         data = lark_client.get_data()
 # Debug output removed - system working correctly
-        today = datetime.now(timezone.utc).date()
+        today = get_local_today()
         
         # Group employees by leader email, evaluation type, and department (EXACT same logic as check_and_send_reminders)
         leader_groups = {}
@@ -1829,7 +1842,8 @@ def send_vendor_notification_grouped(
                     # Show the filename if available with a checkmark and note about attachment
                     if 'name' in attachment_obj:
                         attachment_filename = attachment_obj['name']
-                        separation_display = f'✓ {attachment_filename} <span style="color: #28a745; font-size: 0.9em;">(See Attachments)</span>'
+                        # Make the attachment clickable with a link that references the attachment
+                        separation_display = f'✓ <a href="cid:{attachment_filename}" style="color: #007bff; text-decoration: none; font-weight: 600;">{attachment_filename}</a> <span style="color: #28a745; font-size: 0.9em;">(See Attachments)</span>'
                     else:
                         separation_display = "✓ Attached (See Attachments)"
                 except (json.JSONDecodeError, TypeError):
@@ -1895,7 +1909,7 @@ def send_vendor_notification_grouped(
                     <p><strong>Best regards,</strong></p>
                     <p>HR Department<br>
                     51Talk Online Education<br>
-                    Date: {datetime.now(timezone.utc).strftime('%Y-%m-%d')}</p>
+                    Date: {get_local_now().strftime('%Y-%m-%d')}</p>
                 </div>
             </div>
         </body>
@@ -2005,7 +2019,7 @@ def get_today_reminders():
     """Get today's urgent reminders for sidebar"""
     try:
         data = lark_client.get_data()
-        today = datetime.now(timezone.utc).date()
+        today = get_local_today()
         reminders = []
 
         for employee in data[1:]:  # Skip header
@@ -2099,7 +2113,7 @@ def check_separated_employees():
                 print(f"Could not parse custom date '{custom_date}': {e}")
 
         # Calculate date ranges for filtering
-        today = datetime.now(timezone.utc).date()
+        today = get_local_today()
         yesterday = today - timedelta(days=1)
         last_7_days = today - timedelta(days=7)
         last_30_days = today - timedelta(days=30)
@@ -2229,7 +2243,7 @@ def send_vendor_notifications():
         separated_employees = []
 
         # Calculate date ranges for filtering
-        today = datetime.now(timezone.utc).date()
+        today = get_local_today()
         yesterday = today - timedelta(days=1)
         last_7_days = today - timedelta(days=7)
         last_30_days = today - timedelta(days=30)

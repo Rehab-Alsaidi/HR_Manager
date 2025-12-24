@@ -256,7 +256,14 @@ If PostgreSQL is not available:
    SENDER_EMAILS, EMAIL_USERNAMES, EMAIL_PASSWORDS
    PROBATION_FORM_URL, CONTRACT_RENEWAL_FORM_URL
    LARK_BASE_APP_TOKEN, LARK_BASE_TABLE_ID, LARK_BASE_VIEW_ID
+   TZ=Asia/Amman  # IMPORTANT: Set your timezone to match local time
    ```
+
+   **⚠️ IMPORTANT: Timezone Configuration**
+   - Railway servers use UTC timezone by default
+   - Set `TZ` environment variable to your local timezone (e.g., `Asia/Amman` for Jordan UTC+3)
+   - This ensures dates match your local environment and prevents off-by-one-day errors
+   - Examples: `Asia/Amman`, `Africa/Cairo`, `Asia/Dubai`, `Europe/London`, `America/New_York`
 
 4. **Deploy**
    - Railway auto-deploys on push
