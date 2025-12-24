@@ -1,7 +1,7 @@
 import os
 import psycopg2
 from psycopg2.extras import DictCursor
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 
 def get_db_connection():
@@ -36,8 +36,8 @@ def init_database():
                 leader_email VARCHAR(255) NOT NULL,
                 evaluation_type VARCHAR(100) NOT NULL,
                 sent_date DATE NOT NULL,
-                sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                sent_at TIMESTAMPTZ DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
+                created_at TIMESTAMPTZ DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
                 UNIQUE(employee_name, leader_email, evaluation_type, sent_date)
             )
         """)
@@ -67,12 +67,12 @@ def is_email_sent_today_db(employee_name: str, leader_email: str, evaluation_typ
     cursor = conn.cursor()
     
     try:
-        today = datetime.now().date()
+        today = datetime.now(timezone.utc).date()
         cursor.execute("""
-            SELECT COUNT(*) FROM sent_emails 
-            WHERE employee_name = %s 
-            AND leader_email = %s 
-            AND evaluation_type = %s 
+            SELECT COUNT(*) FROM sent_emails
+            WHERE employee_name = %s
+            AND leader_email = %s
+            AND evaluation_type = %s
             AND sent_date = %s
         """, (employee_name, leader_email, evaluation_type, today))
         
@@ -95,11 +95,11 @@ def mark_email_sent_db(employee_name: str, leader_email: str, evaluation_type: s
     cursor = conn.cursor()
     
     try:
-        today = datetime.now().date()
+        today = datetime.now(timezone.utc).date()
         cursor.execute("""
             INSERT INTO sent_emails (employee_name, leader_email, evaluation_type, sent_date)
             VALUES (%s, %s, %s, %s)
-            ON CONFLICT (employee_name, leader_email, evaluation_type, sent_date) 
+            ON CONFLICT (employee_name, leader_email, evaluation_type, sent_date)
             DO NOTHING
         """, (employee_name, leader_email, evaluation_type, today))
         
@@ -121,8 +121,8 @@ def cleanup_old_email_logs_db(days: int = 30):
     
     try:
         cursor.execute("""
-            DELETE FROM sent_emails 
-            WHERE sent_date < CURRENT_DATE - INTERVAL '%s days'
+            DELETE FROM sent_emails
+            WHERE sent_date < (CURRENT_DATE AT TIME ZONE 'UTC') - INTERVAL '%s days'
         """, (days,))
         
         deleted_count = cursor.rowcount
@@ -147,12 +147,12 @@ def get_sent_emails_summary() -> Dict[str, Any]:
     cursor = conn.cursor()
     
     try:
-        today = datetime.now().date()
-        
+        today = datetime.now(timezone.utc).date()
+
         # Get today's sent emails
         cursor.execute("""
             SELECT employee_name, leader_email, evaluation_type, sent_at
-            FROM sent_emails 
+            FROM sent_emails
             WHERE sent_date = %s
             ORDER BY sent_at DESC
         """, (today,))

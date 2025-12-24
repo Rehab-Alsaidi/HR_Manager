@@ -12,9 +12,11 @@ import random
 import smtplib
 import ssl
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
 from functools import lru_cache
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -232,7 +234,7 @@ def is_email_already_sent_today(
 
     # Fallback to file-based storage
     log_data = load_sent_emails_log()
-    today = datetime.now().date().isoformat()
+    today = datetime.now(timezone.utc).date().isoformat()
 
     # Create unique key for this employee-leader-evaluation combination
     key = f"{employee_name}|{leader_email}|{evaluation_type}"
@@ -269,7 +271,7 @@ def mark_email_as_sent(
 
     # Fallback to file-based storage
     log_data = load_sent_emails_log()
-    today = datetime.now().date().isoformat()
+    today = datetime.now(timezone.utc).date().isoformat()
 
     if today not in log_data:
         log_data[today] = {}
@@ -277,7 +279,7 @@ def mark_email_as_sent(
     # Create unique key for this employee-leader-evaluation combination
     key = f"{employee_name}|{leader_email}|{evaluation_type}"
     log_data[today][key] = {
-        "sent_at": datetime.now().isoformat(),
+        "sent_at": datetime.now(timezone.utc).isoformat(),
         "employee_name": employee_name,
         "leader_email": leader_email,
         "evaluation_type": evaluation_type
@@ -295,7 +297,7 @@ def cleanup_old_logs() -> None:
     """
     log_data = load_sent_emails_log()
     cutoff_date = (
-        datetime.now().date() - timedelta(days=30)
+        datetime.now(timezone.utc).date() - timedelta(days=30)
     ).isoformat()
 
     # Remove entries older than 30 days
@@ -398,7 +400,7 @@ class LarkClient:
             )
             # 2 hours minus 5 minutes buffer
             self.token_expires = (
-                datetime.now() + timedelta(seconds=7200 - 300)
+                datetime.now(timezone.utc) + timedelta(seconds=7200 - 300)
             )
             return self.access_token
         except FeishuError as e:
@@ -422,7 +424,7 @@ class LarkClient:
             "PSID", "Big Team", "Small Team", "Marital Status", "Religion", "Joining Date",
             "2nd Contract Renewal", "Gender", "Nationality", "Birthday", "Age", "University",
             "Educational Level", "School Ranking", "Major", "Exit Date", "Exit Type", "Exit Reason",
-            "Work Email address", "contract type", "service year", "Work Site", "ID N. Front"
+            "Work Email address", "contract type", "service year", "Work Site", "ID N. Front", "Seperation Papers"
         ]
         extracted_data.append(header_row)
         
@@ -481,7 +483,7 @@ class LarkClient:
                         if isinstance(field_value, (int, float)) and field_value > 1000000000:
                             try:
                                 # Handle timestamp (milliseconds)
-                                date_obj = datetime.fromtimestamp(field_value / 1000)
+                                date_obj = datetime.fromtimestamp(field_value / 1000, tz=timezone.utc)
                                 return date_obj.strftime('%Y-%m-%d')
                             except:
                                 return ""
@@ -494,7 +496,7 @@ class LarkClient:
                                 # Base returns dates as timestamps or YYYY-MM-DD
                                 if date_str.isdigit() and len(date_str) > 8:
                                     # Handle timestamp (milliseconds)
-                                    date_obj = datetime.fromtimestamp(int(date_str) / 1000)
+                                    date_obj = datetime.fromtimestamp(int(date_str) / 1000, tz=timezone.utc)
                                     return date_obj.strftime('%Y-%m-%d')
                                 elif 'T' in date_str:
                                     # Handle ISO format
@@ -547,7 +549,8 @@ class LarkClient:
                         ('contract type', ['contract type']),  # Position 33
                         ('service year', ['service year']),  # Position 34
                         ('Work Site', ['Work Site']),  # Position 35
-                        ('ID N. Front', ['ID N. Front'])  # Position 36
+                        ('ID N. Front', ['ID N. Front']),  # Position 36
+                        ('Seperation Papers', ['Seperation Papers'])  # Position 37
                     ]
                     
                     extracted_row = []
@@ -558,6 +561,31 @@ class LarkClient:
                             if field_var in fields:
                                 if field_name in ['Contract Renewal Date', 'Probation Period End Date']:
                                     value = format_base_date(fields[field_var])
+                                elif field_name == 'Seperation Papers':
+                                    # Handle attachment field - store the entire structure as JSON
+                                    field_value = fields[field_var]
+                                    print(f"🔍 Seperation Papers field structure for record: {type(field_value)} = {field_value}")
+                                    if isinstance(field_value, list) and len(field_value) > 0:
+                                        # Store the entire first file object as JSON string
+                                        first_file = field_value[0]
+                                        if isinstance(first_file, dict):
+                                            # Store the entire dict as JSON so we can extract whatever we need later
+                                            import json
+                                            value = json.dumps(first_file)
+                                            print(f"   Stored attachment object: {value}")
+                                            print(f"   Available keys: {list(first_file.keys())}")
+                                        elif isinstance(first_file, str):
+                                            value = first_file
+                                            print(f"   Extracted from string: {value}")
+                                    elif isinstance(field_value, dict):
+                                        # Store the entire dict as JSON
+                                        import json
+                                        value = json.dumps(field_value)
+                                        print(f"   Stored attachment object: {value}")
+                                        print(f"   Available keys: {list(field_value.keys())}")
+                                    elif isinstance(field_value, str):
+                                        value = field_value
+                                        print(f"   Extracted from string: {value}")
                                 else:
                                     value = extract_base_field_value(fields[field_var])
                                 break
@@ -997,7 +1025,7 @@ def format_date_for_display(date_value: Any) -> str:
 
 def check_and_send_reminders(employees_data, additional_cc_emails=None):
     sent_reminders = []
-    today = datetime.now().date()
+    today = datetime.now(timezone.utc).date()
     
     # Group employees by leader email and evaluation type
     leader_groups = {}
@@ -1208,7 +1236,7 @@ def vendor_notifications():
 def todays_reminders():
     try:
         data = lark_client.get_data()
-        today = datetime.now().date()
+        today = datetime.now(timezone.utc).date()
         
         # Group employees by leader email and evaluation type
         # Include both: pending reminders AND emails sent today
@@ -1420,7 +1448,7 @@ def preview_reminders():
     try:
         data = lark_client.get_data()
 # Debug output removed - system working correctly
-        today = datetime.now().date()
+        today = datetime.now(timezone.utc).date()
         
         # Group employees by leader email, evaluation type, and department (EXACT same logic as check_and_send_reminders)
         leader_groups = {}
@@ -1575,9 +1603,13 @@ def convert_timestamp_to_date(timestamp: Any) -> str:
         if timestamp_int > 9999999999:
             timestamp_int = timestamp_int // 1000
 
+        # Use local timezone instead of UTC to avoid day offset issues
         date_obj = datetime.fromtimestamp(timestamp_int)
-        return date_obj.strftime('%Y-%m-%d')
-    except:
+        formatted_date = date_obj.strftime('%Y-%m-%d')
+        print(f"🕐 Timestamp conversion: {timestamp} → {timestamp_int} → {formatted_date}")
+        return formatted_date
+    except Exception as e:
+        print(f"❌ Failed to convert timestamp {timestamp}: {str(e)}")
         return str(timestamp)
 
 
@@ -1623,6 +1655,108 @@ def get_vendor_email(
         return None, 'Helloworld Online Education Jordan LLC'
     else:
         return None, f'Unknown Vendor (Company: {contract_company})'
+
+def download_lark_attachment_by_url(download_url: str, access_token: Optional[str] = None) -> Optional[Tuple[bytes, str]]:
+    """
+    Download file from Lark/Feishu using download URL.
+
+    Args:
+        download_url: Download URL from attachment field (can be 'url' or 'tmp_url')
+        access_token: Optional Lark access token for authentication
+
+    Returns:
+        Tuple of (file_data, filename) or None if download fails
+    """
+    try:
+        print(f"📥 Downloading from URL: {download_url[:100]}...")
+
+        # Add authorization header if access token is provided
+        headers = {}
+        if access_token:
+            headers["Authorization"] = f"Bearer {access_token}"
+
+        response = requests.get(download_url, headers=headers, timeout=30)
+        response.raise_for_status()
+
+        # Get filename from Content-Disposition header or URL
+        filename = "attachment.pdf"  # default
+        if 'Content-Disposition' in response.headers:
+            content_disp = response.headers['Content-Disposition']
+            # Parse Content-Disposition header properly
+            # Example: attachment; filename="file.pdf"; filename*=UTF-8''file.pdf
+            if 'filename=' in content_disp:
+                # Extract the first filename value
+                parts = content_disp.split('filename=')
+                if len(parts) > 1:
+                    # Get the value after filename=
+                    filename_part = parts[1].split(';')[0].strip('"').strip("'")
+                    if filename_part:
+                        filename = filename_part
+        else:
+            # Try to extract from URL
+            from urllib.parse import urlparse, unquote
+            parsed = urlparse(download_url)
+            path_parts = parsed.path.split('/')
+            if path_parts:
+                filename = unquote(path_parts[-1]) or "attachment.pdf"
+
+        print(f"   ✅ Successfully downloaded: {filename} ({len(response.content)} bytes)")
+        return (response.content, filename)
+    except Exception as e:
+        print(f"❌ Failed to download from URL: {str(e)}")
+        try:
+            print(f"   Response status: {response.status_code}")
+            print(f"   Response body: {response.text[:200]}")
+        except:
+            pass
+        return None
+
+def download_lark_attachment(file_token: str, access_token: str) -> Optional[Tuple[bytes, str]]:
+    """
+    Download file from Lark/Feishu using file token.
+
+    Args:
+        file_token: Lark file token from attachment field
+        access_token: Lark access token for authentication
+
+    Returns:
+        Tuple of (file_data, filename) or None if download fails
+    """
+    try:
+        # Try the files endpoint first (for attachments)
+        url = f"{BASE}/drive/v1/files/{file_token}/download"
+        headers = {"Authorization": f"Bearer {access_token}"}
+
+        print(f"📥 Attempting to download file: {file_token}")
+        print(f"   Using URL: {url}")
+
+        response = requests.get(url, headers=headers, timeout=30)
+
+        # If files endpoint fails, try medias endpoint
+        if response.status_code == 400 or response.status_code == 404:
+            print(f"   Files endpoint failed, trying medias endpoint...")
+            url = f"{BASE}/drive/v1/medias/{file_token}/download"
+            response = requests.get(url, headers=headers, timeout=30)
+
+        response.raise_for_status()
+
+        # Get filename from Content-Disposition header
+        filename = "attachment.pdf"  # default
+        if 'Content-Disposition' in response.headers:
+            content_disp = response.headers['Content-Disposition']
+            if 'filename=' in content_disp:
+                filename = content_disp.split('filename=')[1].strip('"')
+
+        print(f"   ✅ Successfully downloaded: {filename}")
+        return (response.content, filename)
+    except Exception as e:
+        print(f"❌ Failed to download Lark attachment {file_token}: {str(e)}")
+        try:
+            print(f"   Response status: {response.status_code}")
+            print(f"   Response body: {response.text[:200]}")
+        except:
+            pass
+        return None
 
 def send_vendor_notification_grouped(
     employees_data: List[Dict[str, Any]],
@@ -1681,15 +1815,34 @@ def send_vendor_notification_grouped(
         # Create professional HTML content with table
         # Use all employees passed to this function (already filtered by date)
 
-        # Create table rows with employee names, exit dates, exit type, and national ID
+        # Create table rows with employee names, exit dates, exit type, national ID, and separation papers
         table_rows = ""
         for emp in employees_data:
+            # Parse separation papers to show user-friendly text
+            separation_display = "-"
+            separation_papers = emp.get('separation_papers', '-')
+
+            if separation_papers and separation_papers not in ['-', '', 'Not specified']:
+                try:
+                    import json
+                    attachment_obj = json.loads(separation_papers)
+                    # Show the filename if available with a checkmark and note about attachment
+                    if 'name' in attachment_obj:
+                        attachment_filename = attachment_obj['name']
+                        separation_display = f'✓ {attachment_filename} <span style="color: #28a745; font-size: 0.9em;">(See Attachments)</span>'
+                    else:
+                        separation_display = "✓ Attached (See Attachments)"
+                except (json.JSONDecodeError, TypeError):
+                    # If not JSON, might be plain text filename
+                    separation_display = "✓ Attached (See Attachments)"
+
             table_rows += f"""
                 <tr>
                     <td style="padding: 12px; border: 1px solid #ddd;">{emp['name']}</td>
                     <td style="padding: 12px; border: 1px solid #ddd;">{emp.get('national_id', '-')}</td>
                     <td style="padding: 12px; border: 1px solid #ddd;">{emp.get('exit_date', 'Not specified')}</td>
                     <td style="padding: 12px; border: 1px solid #ddd;">{emp.get('exit_type', '-')}</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">{separation_display}</td>
                 </tr>"""
 
         html_content = f"""
@@ -1728,6 +1881,7 @@ def send_vendor_notification_grouped(
                             <th style="padding: 12px; border: 1px solid #ddd; text-align: left; color: white;">National ID</th>
                             <th style="padding: 12px; border: 1px solid #ddd; text-align: left; color: white;">Exit Date</th>
                             <th style="padding: 12px; border: 1px solid #ddd; text-align: left; color: white;">Exit Type</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; color: white;">Separation Papers</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1741,7 +1895,7 @@ def send_vendor_notification_grouped(
                     <p><strong>Best regards,</strong></p>
                     <p>HR Department<br>
                     51Talk Online Education<br>
-                    Date: {datetime.now().strftime('%Y-%m-%d')}</p>
+                    Date: {datetime.now(timezone.utc).strftime('%Y-%m-%d')}</p>
                 </div>
             </div>
         </body>
@@ -1751,7 +1905,84 @@ def send_vendor_notification_grouped(
         # Attach HTML content
         html_part = MIMEText(html_content, "html")
         message.attach(html_part)
-        
+
+        # Attach separation papers for each employee if available
+        attachments_count = 0
+        try:
+            import json
+            access_token = lark_client.get_access_token()
+            print(f"\n📎 Processing attachments for {len(employees_data)} employees...")
+
+            for idx, emp in enumerate(employees_data, 1):
+                separation_papers = emp.get('separation_papers')
+                print(f"\n[{idx}/{len(employees_data)}] Employee: {emp['name']}")
+                print(f"    Separation papers value: {separation_papers}")
+
+                if separation_papers and separation_papers not in ['-', '', 'Not specified']:
+                    file_data = None
+
+                    # Try to parse as JSON first (if it's an attachment object)
+                    try:
+                        attachment_obj = json.loads(separation_papers)
+                        print(f"    📎 Parsed attachment object - has {len(attachment_obj)} fields")
+
+                        # Try 'url' field first (direct download link with permissions)
+                        if 'url' in attachment_obj and attachment_obj['url']:
+                            print(f"    → Using 'url' field for download")
+                            file_data = download_lark_attachment_by_url(attachment_obj['url'], access_token)
+                        # Try tmp_url (direct download link)
+                        elif 'tmp_url' in attachment_obj and attachment_obj['tmp_url']:
+                            print(f"    → Using tmp_url for download")
+                            file_data = download_lark_attachment_by_url(attachment_obj['tmp_url'], access_token)
+                        # Otherwise try file_token
+                        elif 'file_token' in attachment_obj and attachment_obj['file_token']:
+                            print(f"    → Using file_token for download: {attachment_obj['file_token']}")
+                            file_data = download_lark_attachment(attachment_obj['file_token'], access_token)
+                        # Try other possible token fields
+                        elif 'token' in attachment_obj and attachment_obj['token']:
+                            print(f"    → Using token for download: {attachment_obj['token']}")
+                            file_data = download_lark_attachment(attachment_obj['token'], access_token)
+
+                    except (json.JSONDecodeError, TypeError) as e:
+                        # Not JSON, treat as simple file token string
+                        print(f"    Not JSON (error: {e}), treating as file token")
+                        if isinstance(separation_papers, str) and separation_papers.strip():
+                            file_token = separation_papers.strip()
+                            print(f"    → Processing file token: {file_token}")
+                            file_data = download_lark_attachment(file_token, access_token)
+
+                    if file_data:
+                        file_content, filename = file_data
+
+                        # Create attachment as regular email attachment
+                        part = MIMEBase('application', 'octet-stream')
+                        part.set_payload(file_content)
+                        encoders.encode_base64(part)
+
+                        # Add header with employee name prefix
+                        safe_emp_name = emp['name'].replace(' ', '_')
+                        attachment_name = f"{safe_emp_name}_{filename}"
+
+                        part.add_header(
+                            'Content-Disposition',
+                            f'attachment; filename="{attachment_name}"'
+                        )
+
+                        message.attach(part)
+                        attachments_count += 1
+                        print(f"    ✅ Attached: {attachment_name} (Total attachments: {attachments_count})")
+                    else:
+                        print(f"    ⚠️  Could not download separation papers")
+                else:
+                    print(f"    ℹ️  No separation papers to attach")
+
+            print(f"\n✅ Total attachments added to email: {attachments_count}")
+
+        except Exception as e:
+            print(f"  ⚠️  Error attaching separation papers: {str(e)}")
+            import traceback
+            traceback.print_exc()
+
         # Send email using SSL (same as reminders)
         context = ssl.create_default_context()
         context.check_hostname = False
@@ -1774,7 +2005,7 @@ def get_today_reminders():
     """Get today's urgent reminders for sidebar"""
     try:
         data = lark_client.get_data()
-        today = datetime.now().date()
+        today = datetime.now(timezone.utc).date()
         reminders = []
 
         for employee in data[1:]:  # Skip header
@@ -1847,9 +2078,28 @@ def check_separated_employees():
         # Get filter parameters
         date_filter = request.args.get('filter', 'all')
         custom_date = request.args.get('date', '')
-        
+
+        # Normalize custom date to YYYY-MM-DD format
+        normalized_custom_date = ''
+        if custom_date:
+            try:
+                # Try parsing various date formats - prioritize DD-MM-YYYY for ambiguous dates
+                for fmt in ['%Y-%m-%d', '%d-%m-%Y', '%Y/%m/%d', '%d/%m/%Y']:
+                    try:
+                        parsed_date = datetime.strptime(custom_date, fmt).date()
+                        normalized_custom_date = parsed_date.strftime('%Y-%m-%d')
+                        print(f"📅 Parsed custom date '{custom_date}' as {normalized_custom_date} using format {fmt}")
+                        break
+                    except ValueError:
+                        continue
+
+                if not normalized_custom_date:
+                    print(f"❌ Could not parse custom date: {custom_date}")
+            except Exception as e:
+                print(f"Could not parse custom date '{custom_date}': {e}")
+
         # Calculate date ranges for filtering
-        today = datetime.now().date()
+        today = datetime.now(timezone.utc).date()
         yesterday = today - timedelta(days=1)
         last_7_days = today - timedelta(days=7)
         last_30_days = today - timedelta(days=30)
@@ -1869,6 +2119,7 @@ def check_separated_employees():
             department = employee[8] if len(employee) > 8 else None  # Department - Position 8
             position = employee[5] if len(employee) > 5 else None  # Position - Position 5
             national_id = employee[36] if len(employee) > 36 else None  # ID N. Front - Position 36
+            separation_papers = employee[37] if len(employee) > 37 else None  # Seperation Papers - Position 37
 
             if not employee_name or not str(employee_name).strip():
                 continue
@@ -1877,8 +2128,12 @@ def check_separated_employees():
             if employee_status and str(employee_status).lower().strip() in ['separated', 'seperated', 'terminated']:
                 exit_date_formatted = convert_timestamp_to_date(exit_date)
 
+                # Debug: Print employee separation info
+                print(f"🔍 Found separated employee: {employee_name} | Status: {employee_status} | Exit Date: {exit_date} | Formatted: {exit_date_formatted}")
+
                 # Skip employees without exit dates (don't show "Not specified" or "-" in vendor notifications)
                 if not exit_date_formatted or exit_date_formatted in ['-', 'Not specified', '']:
+                    print(f"  ⚠️  Skipping {employee_name} - No valid exit date")
                     continue
 
                 # Apply date filtering
@@ -1888,20 +2143,25 @@ def check_separated_employees():
 
                         if date_filter == 'today':
                             # Only show if exit date is exactly today
+                            print(f"  📅 Checking today filter: exit_date={exit_date_obj}, today={today}, match={exit_date_obj == today}")
                             if exit_date_obj != today:
                                 continue
                         elif date_filter == 'last7days':
                             # Show if within last 7 days (including today)
                             if exit_date_obj < last_7_days or exit_date_obj > today:
                                 continue
-                        elif date_filter == 'yesterday' and exit_date_obj != yesterday:
-                            continue
+                        elif date_filter == 'yesterday':
+                            print(f"  📅 Checking yesterday filter: exit_date={exit_date_obj}, yesterday={yesterday}, match={exit_date_obj == yesterday}")
+                            if exit_date_obj != yesterday:
+                                print(f"    ❌ Not yesterday, skipping")
+                                continue
+                            print(f"    ✅ Matched yesterday!")
                         elif date_filter == 'last30days' and exit_date_obj < last_30_days:
                             continue
                         elif date_filter == 'october2024' and not exit_date_formatted.startswith('2024-10'):
                             continue
-                        elif date_filter == 'custom' and custom_date:
-                            if exit_date_formatted != custom_date:
+                        elif date_filter == 'custom' and normalized_custom_date:
+                            if exit_date_formatted != normalized_custom_date:
                                 continue
                         # For 'all' filter, show all dates
                     except ValueError:
@@ -1923,7 +2183,8 @@ def check_separated_employees():
                     'vendor_name': vendor_name,
                     'position': position or '-',
                     'contract_company': contract_company or 'N/A',
-                    'national_id': national_id or '-'
+                    'national_id': national_id or '-',
+                    'separation_papers': separation_papers or '-'
                 })
 
         return jsonify({
@@ -1944,12 +2205,31 @@ def send_vendor_notifications():
         date_filter = request_data.get('filter', 'all')
         custom_date = request_data.get('date', '')
 
+        # Normalize custom date to YYYY-MM-DD format
+        normalized_custom_date = ''
+        if custom_date:
+            try:
+                # Try parsing various date formats - prioritize DD-MM-YYYY for ambiguous dates
+                for fmt in ['%Y-%m-%d', '%d-%m-%Y', '%Y/%m/%d', '%d/%m/%Y']:
+                    try:
+                        parsed_date = datetime.strptime(custom_date, fmt).date()
+                        normalized_custom_date = parsed_date.strftime('%Y-%m-%d')
+                        print(f"📅 Parsed custom date '{custom_date}' as {normalized_custom_date} using format {fmt}")
+                        break
+                    except ValueError:
+                        continue
+
+                if not normalized_custom_date:
+                    print(f"❌ Could not parse custom date: {custom_date}")
+            except Exception as e:
+                print(f"Could not parse custom date '{custom_date}': {e}")
+
         # Get separated employees with the same filter that was used in the UI
         data = lark_client.get_data()
         separated_employees = []
 
         # Calculate date ranges for filtering
-        today = datetime.now().date()
+        today = datetime.now(timezone.utc).date()
         yesterday = today - timedelta(days=1)
         last_7_days = today - timedelta(days=7)
         last_30_days = today - timedelta(days=30)
@@ -1969,6 +2249,7 @@ def send_vendor_notifications():
             department = employee[8] if len(employee) > 8 else None
             position = employee[5] if len(employee) > 5 else None
             national_id = employee[36] if len(employee) > 36 else None  # ID N. Front - Position 36
+            separation_papers = employee[37] if len(employee) > 37 else None  # Seperation Papers - Position 37
 
             if not employee_name or not str(employee_name).strip():
                 continue
@@ -1998,8 +2279,8 @@ def send_vendor_notifications():
                             continue
                         elif date_filter == 'october2024' and not exit_date_formatted.startswith('2024-10'):
                             continue
-                        elif date_filter == 'custom' and custom_date:
-                            if exit_date_formatted != custom_date:
+                        elif date_filter == 'custom' and normalized_custom_date:
+                            if exit_date_formatted != normalized_custom_date:
                                 continue
                     except ValueError:
                         pass
@@ -2019,7 +2300,8 @@ def send_vendor_notifications():
                     'vendor_name': vendor_name,
                     'position': position or '-',
                     'contract_company': contract_company or 'N/A',
-                    'national_id': national_id or '-'
+                    'national_id': national_id or '-',
+                    'separation_papers': separation_papers or '-'
                 })
 
         # Group employees by vendor email and vendor name
