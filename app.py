@@ -1830,6 +1830,7 @@ def send_vendor_notification_grouped(
 
         # Create table rows with employee names, exit dates, exit type, national ID, and separation papers
         table_rows = ""
+        attachment_list = []  # Track attachments for summary section
         for emp in employees_data:
             # Parse separation papers to show user-friendly text
             separation_display = "-"
@@ -1839,15 +1840,26 @@ def send_vendor_notification_grouped(
                 try:
                     import json
                     attachment_obj = json.loads(separation_papers)
-                    # Show the filename if available with a checkmark and note about attachment
+                    # Show the filename if available with professional styling
                     if 'name' in attachment_obj:
                         attachment_filename = attachment_obj['name']
-                        # Generate Content-ID that matches what we'll use in the attachment
                         safe_emp_name = emp['name'].replace(' ', '_')
                         full_attachment_name = f"{safe_emp_name}_{attachment_filename}"
-                        content_id = full_attachment_name.replace(' ', '_').replace('.', '_')
-                        # Make the attachment clickable with a link that references the Content-ID
-                        separation_display = f'✓ <a href="cid:{content_id}" style="color: #007bff; text-decoration: underline; font-weight: 600;">{attachment_filename}</a>'
+
+                        # Add to attachment list for summary
+                        attachment_list.append({
+                            'employee': emp['name'],
+                            'filename': full_attachment_name
+                        })
+
+                        # Professional display with icon - reference attachment number
+                        attachment_number = len(attachment_list)
+                        separation_display = f'''
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span style="background: #007bff; color: white; border-radius: 50%; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold;">{attachment_number}</span>
+                                <div style="color: #007bff; font-weight: 600; font-size: 13px;">{attachment_filename}</div>
+                            </div>
+                        '''
                     else:
                         separation_display = "✓ Attached (See Attachments)"
                 except (json.JSONDecodeError, TypeError):
@@ -1908,6 +1920,8 @@ def send_vendor_notification_grouped(
                 </table>
 
                 <p>Please update your records accordingly and ensure any pending transactions or access permissions are reviewed and updated.</p>
+
+                {'<div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-left: 4px solid #007bff; border-radius: 4px;"><h3 style="color: #007bff; margin-top: 0; font-size: 16px; margin-bottom: 15px;">📎 Attached Documents (' + str(len(attachment_list)) + ')</h3>' + ''.join([f'<div style="padding: 10px; margin: 8px 0; background: white; border-radius: 4px; border: 1px solid #dee2e6; display: flex; align-items: center; gap: 10px;"><span style="background: #007bff; color: white; border-radius: 50%; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; flex-shrink: 0;">{i+1}</span><div><div style="font-weight: 600; color: #333; font-size: 13px;">{att["filename"]}</div><div style="color: #6c757d; font-size: 11px;">Employee: {att["employee"]}</div></div></div>' for i, att in enumerate(attachment_list)]) + '<p style="margin-top: 15px; margin-bottom: 0; color: #6c757d; font-size: 12px; font-style: italic;">💡 Tip: Scroll down to view and download attached documents</p></div>' if attachment_list else ''}
 
                 <div class="footer">
                     <p><strong>Best regards,</strong></p>
@@ -1989,13 +2003,9 @@ def send_vendor_notification_grouped(
                             f'attachment; filename="{attachment_name}"'
                         )
 
-                        # Add Content-ID for inline linking (make it clickable in email)
-                        content_id = f"{safe_emp_name}_{filename}".replace(' ', '_').replace('.', '_')
-                        part.add_header('Content-ID', f'<{content_id}>')
-
                         message.attach(part)
                         attachments_count += 1
-                        print(f"    ✅ Attached: {attachment_name} with CID: {content_id} (Total attachments: {attachments_count})")
+                        print(f"    ✅ Attached: {attachment_name} (Total attachments: {attachments_count})")
                     else:
                         print(f"    ⚠️  Could not download separation papers")
                 else:
