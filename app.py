@@ -723,7 +723,7 @@ def get_department_cc_emails(
     }
 
     # Always include constant CC
-    constant_cc = ['lijie14@51talk.com']
+    constant_cc = ['lijie14@51talk.com', 'mohdawrtani@51talk.com']
 
     # Collect all CC emails based on departments in this group
     cc_emails: Set[str] = set(constant_cc)
