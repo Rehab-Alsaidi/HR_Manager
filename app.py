@@ -1091,8 +1091,8 @@ def check_and_send_reminders(employees_data, additional_cc_emails=None):
                 days_remaining = int(float(str(probation_remaining_days)))
                 # Calculate evaluation deadline (7 days before end date)
                 evaluation_days_remaining = days_remaining - 7
-                # Check if evaluation is due in 15-22 days (range instead of exact 20)
-                if 15 <= evaluation_days_remaining <= 22:
+                # Check if evaluation is due in 14-22 days (range instead of exact 20)
+                if 14 <= evaluation_days_remaining <= 22:
                     chosen_evaluation = "Probation Period Evaluation"
                     chosen_days = evaluation_days_remaining
                     # Calculate the evaluation deadline date
@@ -1108,8 +1108,8 @@ def check_and_send_reminders(employees_data, additional_cc_emails=None):
                 days_remaining = int(float(str(contract_remaining_days)))
                 # Calculate evaluation deadline (7 days before end date)
                 evaluation_days_remaining = days_remaining - 7
-                # Check if evaluation is due in 15-22 days (range instead of exact 20)
-                if 15 <= evaluation_days_remaining <= 22:
+                # Check if evaluation is due in 14-22 days (range instead of exact 20)
+                if 14 <= evaluation_days_remaining <= 22:
                     # If probation is also in range, probation takes priority
                     if chosen_evaluation is None or chosen_evaluation != "Probation Period Evaluation":
                         chosen_evaluation = "Contract Renewal Evaluation"
@@ -1298,8 +1298,8 @@ def todays_reminders():
                     days_remaining = int(float(str(probation_remaining_days)))
                     # Calculate evaluation deadline (7 days before end date)
                     evaluation_days_remaining = days_remaining - 7
-                    # Check if evaluation is due in 15-22 days (range instead of exact 20)
-                    if 15 <= evaluation_days_remaining <= 22:
+                    # Check if evaluation is due in 14-22 days (range instead of exact 20)
+                    if 14 <= evaluation_days_remaining <= 22:
                         chosen_evaluation = "Probation Period Evaluation"
                         chosen_days = evaluation_days_remaining
                         # Calculate the evaluation deadline date
@@ -1313,8 +1313,8 @@ def todays_reminders():
                     days_remaining = int(float(str(contract_remaining_days)))
                     # Calculate evaluation deadline (7 days before end date)
                     evaluation_days_remaining = days_remaining - 7
-                    # Check if evaluation is due in 15-22 days (range instead of exact 20)
-                    if 15 <= evaluation_days_remaining <= 22:
+                    # Check if evaluation is due in 14-22 days (range instead of exact 20)
+                    if 14 <= evaluation_days_remaining <= 22:
                         # If probation is also in range, probation takes priority
                         if chosen_evaluation is None or chosen_evaluation != "Probation Period Evaluation":
                             chosen_evaluation = "Contract Renewal Evaluation"
@@ -1510,8 +1510,8 @@ def preview_reminders():
                     days_remaining = int(float(str(probation_remaining_days)))
                     # Calculate evaluation deadline (7 days before end date)
                     evaluation_days_remaining = days_remaining - 7
-                    # Check if evaluation is due in 15-22 days (range instead of exact 20)
-                    if 15 <= evaluation_days_remaining <= 22:
+                    # Check if evaluation is due in 14-22 days (range instead of exact 20)
+                    if 14 <= evaluation_days_remaining <= 22:
                         chosen_evaluation = "Probation Period Evaluation"
                         chosen_days = evaluation_days_remaining
                         # Calculate the evaluation deadline date
@@ -1525,8 +1525,8 @@ def preview_reminders():
                     days_remaining = int(float(str(contract_remaining_days)))
                     # Calculate evaluation deadline (7 days before end date)
                     evaluation_days_remaining = days_remaining - 7
-                    # Check if evaluation is due in 15-22 days (range instead of exact 20)
-                    if 15 <= evaluation_days_remaining <= 22:
+                    # Check if evaluation is due in 14-22 days (range instead of exact 20)
+                    if 14 <= evaluation_days_remaining <= 22:
                         # If probation is also in range, probation takes priority
                         if chosen_evaluation is None or chosen_evaluation != "Probation Period Evaluation":
                             chosen_evaluation = "Contract Renewal Evaluation"
@@ -2066,8 +2066,8 @@ def get_today_reminders():
                     days_remaining = int(float(str(probation_remaining_days)))
                     # Calculate evaluation deadline (7 days before end date)
                     evaluation_days_remaining = days_remaining - 7
-                    # Check if evaluation is due in 15-22 days (range instead of exact 20)
-                    if 15 <= evaluation_days_remaining <= 22:
+                    # Check if evaluation is due in 14-22 days (range instead of exact 20)
+                    if 14 <= evaluation_days_remaining <= 22:
                         reminders.append({
                             'employee_name': employee_name,
                             'evaluation_type': 'Probation',
@@ -2082,8 +2082,8 @@ def get_today_reminders():
                     days_remaining = int(float(str(contract_remaining_days)))
                     # Calculate evaluation deadline (7 days before end date)
                     evaluation_days_remaining = days_remaining - 7
-                    # Check if evaluation is due in 15-22 days (range instead of exact 20)
-                    if 15 <= evaluation_days_remaining <= 22:
+                    # Check if evaluation is due in 14-22 days (range instead of exact 20)
+                    if 14 <= evaluation_days_remaining <= 22:
                         reminders.append({
                             'employee_name': employee_name,
                             'evaluation_type': 'Contract',
