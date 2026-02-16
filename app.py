@@ -710,16 +710,16 @@ def get_department_cc_emails(
         emails based on mapping:
         - CC/GCC: wuchuan@51talk.com
         - ACC: shichuan001@51talk.com
-        - EA: guanshuhao001@51talk.com, nikiyang@51talk.com
-        - CM: wangjingjing@51talk.com, nikiyang@51talk.com
+        - EA: guanshuhao001@51talk.com
+        - CM: wangjingjing@51talk.com
     """
     # Department-based CC mapping
     department_cc_mapping = {
         'CC': ['wuchuan@51talk.com'],
         'GCC': ['wuchuan@51talk.com'],
         'ACC': ['shichuan001@51talk.com'],
-        'EA': ['guanshuhao001@51talk.com', 'nikiyang@51talk.com'],
-        'CM': ['wangjingjing@51talk.com', 'nikiyang@51talk.com']
+        'EA': ['guanshuhao001@51talk.com'],
+        'CM': ['guanshuhao001@51talk.com', 'wangjingjing@51talk.com']
     }
 
     # Always include constant CC
