@@ -1075,6 +1075,7 @@ def check_and_send_reminders(employees_data, additional_cc_emails=None):
             continue  # Skip non-active employees
 
         # Exclude employees from specific departments (AI, CM, EA, CS)
+        # These departments should not receive evaluation reminder emails
         excluded_departments = ['AI', 'CM', 'EA', 'CS']
         if department and str(department).strip().upper() in excluded_departments:
             continue  # Skip employees from excluded departments
@@ -1494,6 +1495,7 @@ def preview_reminders():
                 continue  # Skip non-active employees
 
             # Exclude employees from specific departments (AI, CM, EA, CS)
+            # These departments should not receive evaluation reminder emails
             excluded_departments = ['AI', 'CM', 'EA', 'CS']
             if department and str(department).strip().upper() in excluded_departments:
                 continue  # Skip employees from excluded departments
