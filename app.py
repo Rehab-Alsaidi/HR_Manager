@@ -1073,7 +1073,12 @@ def check_and_send_reminders(employees_data, additional_cc_emails=None):
         # Only process Active employees - skip all others (separated, terminated, etc.)
         if not employee_status or str(employee_status).strip().lower() != 'active':
             continue  # Skip non-active employees
-        
+
+        # Exclude employees from specific departments (AI, CM, EA, CS)
+        excluded_departments = ['AI', 'CM', 'EA', 'CS']
+        if department and str(department).strip().upper() in excluded_departments:
+            continue  # Skip employees from excluded departments
+
         # Create unique key for this employee under this leader to prevent duplicates
         employee_leader_key = f"{employee_name.strip()}|{leader_email}"
         
@@ -1487,6 +1492,11 @@ def preview_reminders():
             # Only preview Active employees - skip all others (separated, terminated, etc.)
             if not employee_status or str(employee_status).strip().lower() != 'active':
                 continue  # Skip non-active employees
+
+            # Exclude employees from specific departments (AI, CM, EA, CS)
+            excluded_departments = ['AI', 'CM', 'EA', 'CS']
+            if department and str(department).strip().upper() in excluded_departments:
+                continue  # Skip employees from excluded departments
 
             # Create unique key for this employee under this leader to prevent duplicates
             employee_leader_key = f"{employee_name.strip()}|{leader_email}"
