@@ -1284,6 +1284,12 @@ def todays_reminders():
             if not employee_status or str(employee_status).strip().lower() != 'active':
                 continue  # Skip non-active employees
 
+            # Exclude employees from specific departments (AI, CM, EA, CS)
+            # These departments should not receive evaluation reminder emails
+            excluded_departments = ['AI', 'CM', 'EA', 'CS']
+            if department and str(department).strip().upper() in excluded_departments:
+                continue  # Skip employees from excluded departments
+
             employee_leader_key = f"{employee_name.strip()}|{leader_email}"
 
             chosen_evaluation = None
