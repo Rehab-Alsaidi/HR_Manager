@@ -1074,9 +1074,9 @@ def check_and_send_reminders(employees_data, additional_cc_emails=None):
         if not employee_status or str(employee_status).strip().lower() != 'active':
             continue  # Skip non-active employees
 
-        # Exclude employees from specific departments (AI, CM, EA, CS)
+        # Exclude employees from specific departments (AI, CM, EA, CS, GCC, CC)
         # These departments should not receive evaluation reminder emails
-        excluded_departments = ['AI', 'CM', 'EA', 'CS']
+        excluded_departments = ['AI', 'CM', 'EA', 'CS', 'GCC', 'CC']
         if department and str(department).strip().upper() in excluded_departments:
             continue  # Skip employees from excluded departments
 
@@ -1284,9 +1284,9 @@ def todays_reminders():
             if not employee_status or str(employee_status).strip().lower() != 'active':
                 continue  # Skip non-active employees
 
-            # Exclude employees from specific departments (AI, CM, EA, CS)
+            # Exclude employees from specific departments (AI, CM, EA, CS, GCC, CC)
             # These departments should not receive evaluation reminder emails
-            excluded_departments = ['AI', 'CM', 'EA', 'CS']
+            excluded_departments = ['AI', 'CM', 'EA', 'CS', 'GCC', 'CC']
             if department and str(department).strip().upper() in excluded_departments:
                 continue  # Skip employees from excluded departments
 
@@ -1500,9 +1500,9 @@ def preview_reminders():
             if not employee_status or str(employee_status).strip().lower() != 'active':
                 continue  # Skip non-active employees
 
-            # Exclude employees from specific departments (AI, CM, EA, CS)
+            # Exclude employees from specific departments (AI, CM, EA, CS, GCC, CC)
             # These departments should not receive evaluation reminder emails
-            excluded_departments = ['AI', 'CM', 'EA', 'CS']
+            excluded_departments = ['AI', 'CM', 'EA', 'CS', 'GCC', 'CC']
             if department and str(department).strip().upper() in excluded_departments:
                 continue  # Skip employees from excluded departments
 
